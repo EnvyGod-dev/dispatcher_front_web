@@ -10,6 +10,7 @@ import {
   Wrench,
   FileText,
   ClipboardCheck,
+  Fuel,
 } from 'lucide-react';
 
 import {
@@ -22,6 +23,7 @@ import {
   stockpileReadRoles,
 } from '@/services/roles';
 
+import { fuelControlRoles, fuelViewRoles } from '@/lib/fuel/roles';
 import { MenuSection } from './menu-config';
 
 export const menuSections: MenuSection[] = [
@@ -64,6 +66,31 @@ export const menuSections: MenuSection[] = [
         path: '/employees',
         type: 'register',
         roles: employeeReadRoles,
+      },
+    ],
+  },
+
+  // =========================================================
+  // FUEL
+  // =========================================================
+  {
+    title: 'Түлш',
+    key: 'fuel',
+    items: [
+      {
+        icon: Fuel,
+        name: 'Түлшний хяналт',
+        type: 'fuel',
+        roles: fuelViewRoles,
+        subItems: [
+          { name: 'Тойм', path: '/fuel', roles: fuelViewRoles },
+          { name: 'Олголт', path: '/fuel/refuelings', roles: fuelViewRoles },
+          { name: 'Орлого', path: '/fuel/receipts', roles: fuelViewRoles },
+          { name: 'Зарцуулалт', path: '/fuel/consumption', roles: fuelViewRoles },
+          { name: 'Тайлан', path: '/fuel/reports', roles: fuelViewRoles },
+          { name: 'Аудит', path: '/fuel/audit', roles: fuelControlRoles },
+          { name: 'Тохиргоо', path: '/fuel/settings', roles: fuelControlRoles },
+        ],
       },
     ],
   },

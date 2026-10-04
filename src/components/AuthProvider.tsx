@@ -85,7 +85,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const handleLogin = (loginResponse: UserPrivate) => {
     setAuthState({ user: loginResponse, isInit: true })
 
-    router.push("/")
+    /**
+     * Session дуусаад /signin?next=... руу шилжсэн бол буцааж тэр хуудсанд оруулна.
+     * Зөвхөн дотоод зам ("/..." , "//..." биш) зөвшөөрнө.
+     */
+    const next = new URLSearchParams(window.location.search).get("next")
+    const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/"
+
+    router.push(target)
   }
 
   const signOut = () => {
