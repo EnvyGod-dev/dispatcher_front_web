@@ -286,3 +286,31 @@ export interface FuelAuditLog {
   userName: string | null;
   userRole: string | null;
 }
+
+export type FuelMeasureMethod = 'meter' | 'gauge' | 'sensor' | 'manual' | 'calculated';
+
+export interface FuelOpeningBalance {
+  id: string;
+  holderType: 'tank' | 'dispenser' | 'equipment';
+  tankId: string | null;
+  vehicleId: string | null;
+  balanceAt: string;
+  quantity: string;
+  method: FuelMeasureMethod;
+  notes: string | null;
+  tankName: string | null;
+}
+
+export interface FuelMeasurement {
+  id: string;
+  holderType: 'tank' | 'dispenser' | 'equipment';
+  tankId: string | null;
+  measuredAt: string;
+  calculatedQuantity: string;
+  measuredQuantity: string;
+  difference: string;
+  method: FuelMeasureMethod;
+  applyAdjustment: boolean;
+  notes: string | null;
+  tankName: string | null;
+}
