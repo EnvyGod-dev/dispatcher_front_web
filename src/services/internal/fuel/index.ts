@@ -7,6 +7,9 @@ import type {
   FuelDashboard,
   FuelNorm,
   FuelPeriodSummary,
+  FuelMeasureMethod,
+  FuelMeasurement,
+  FuelOpeningBalance,
   FuelReceipt,
   FuelReceiptEditRequest,
   FuelReceiptInput,
@@ -94,6 +97,29 @@ const fuelService = {
   // ── Balances ─────────────────────────────────────────────
   getBalances: async (holderType: FuelBalance['holderType']) =>
     (await http.get<FuelBalance[]>(`${base}/balances`, { params: { holderType } })).body,
+
+  getOpeningBalances: async () =>
+    (await http.get<FuelOpeningBalance[]>(`${base}/opening-balances`, { params: { holderType: 'tank' } })).body,
+  /** Агуулахын эхний (гарааны) үлдэгдэл. Энэ огнооноос өмнө хөдөлгөөн байж болохгүй. */
+  createOpeningBalance: (input: {
+    holderId: string;
+    balanceAt: string;
+    quantity: number;
+    method: FuelMeasureMethod;
+    notes?: string | null;
+  }) => http.post<FuelOpeningBalance>(`${base}/opening-balances`, { body: { holderType: 'tank', ...input } }),
+
+  getMeasurements: async (tankId?: string) =>
+    (await http.get<FuelMeasurement[]>(`${base}/measurements`, { params: { holderType: 'tank', tankId } })).body,
+  /** Бодит хэмжилт. applyAdjustment үед тооцоолсон үлдэгдлийг хэмжсэнтэй тэнцүүлэх тохируулга үүснэ. */
+  createMeasurement: (input: {
+    holderId: string;
+    measuredAt: string;
+    measuredQuantity: number;
+    method: FuelMeasureMethod;
+    applyAdjustment: boolean;
+    notes?: string | null;
+  }) => http.post<FuelMeasurement>(`${base}/measurements`, { body: { holderType: 'tank', ...input } }),
 
   // ── Analytics ────────────────────────────────────────────
   getDashboard: async (from: string, to: string) =>
