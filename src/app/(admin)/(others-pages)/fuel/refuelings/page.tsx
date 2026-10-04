@@ -382,7 +382,9 @@ function EditRefuelingDialog({
 }) {
   const hasMeter = refueling.meterStart !== null && refueling.meterEnd !== null;
   const vehicles = useQuery({ queryKey: ['fuel', 'vehicles'], queryFn: fuelService.getVehicles });
+  const tanks = useQuery({ queryKey: ['fuel', 'tanks'], queryFn: fuelService.getTanks });
 
+  const [tankId, setTankId] = useState(refueling.tankId ?? '');
   const [vehicleId, setVehicleId] = useState(refueling.receiverVehicleId);
   const [quantity, setQuantity] = useState(String(toNum(refueling.quantity)));
   const [meterStart, setMeterStart] = useState(hasMeter ? fmtMeter(refueling.meterStart) : '');
@@ -396,6 +398,7 @@ function EditRefuelingDialog({
   const mutation = useMutation({
     mutationFn: () => {
       const changes: Record<string, unknown> = {};
+      if (tankId && tankId !== refueling.tankId) changes.tankId = tankId;
       if (vehicleId !== refueling.receiverVehicleId) changes.receiverVehicleId = vehicleId;
       if (hasMeter) {
         if (toNum(meterStart) !== toNum(refueling.meterStart) || toNum(meterEnd) !== toNum(refueling.meterEnd)) {
@@ -441,6 +444,16 @@ function EditRefuelingDialog({
         </>
       }
     >
+      {refueling.sourceType === 'tank' && (
+        <Field label="Аль агуулахаас">
+          <SelectInput
+            value={tankId}
+            onChange={setTankId}
+            options={(tanks.data ?? []).filter((t) => t.isActive || t.id === refueling.tankId).map((t) => ({ value: t.id, label: t.name }))}
+            disabled={tanks.isLoading}
+          />
+        </Field>
+      )}
       <Field label="Техник">
         <SelectInput value={vehicleId} onChange={setVehicleId} options={vehicleOptions} disabled={vehicles.isLoading} />
       </Field>
