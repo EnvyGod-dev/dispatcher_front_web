@@ -73,6 +73,7 @@ export interface FuelRefuelingFilters {
 }
 
 export interface FuelRefuelingUpdate {
+  tankId?: string;
   receiverVehicleId?: string;
   quantity?: number | null;
   meterStart?: number | null;
