@@ -119,6 +119,44 @@ const serializeParams = (
     : ""
 }
 
+/**
+ * 204 / хоосон / JSON биш body-д унахгүй.
+ */
+const readJson = async <T>(response: Response): Promise<T | null> => {
+  const text = await response.text()
+
+  if (!text) return null
+
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Session дууссан (401) үед хэрэглэгчийг нэвтрэх хуудас руу НЭГ удаа шилжүүлнэ.
+ * Олон зэрэг хүсэлт 401 өгсөн ч давхар redirect хийхгүй.
+ * Нэвтрэх, /api/iam bootstrap хүсэлтийг AuthProvider өөрөө зохицуулна.
+ */
+let isRedirectingToSignIn = false
+
+const handleUnauthorized = (url: string) => {
+  if (typeof window === "undefined" || isRedirectingToSignIn) return
+
+  if (url.startsWith("api/auth/") || url === "api/iam") return
+
+  const path = window.location.pathname
+
+  if (path === "/signin" || path === "/privacy-policy" || path.startsWith("/error-")) return
+
+  isRedirectingToSignIn = true
+
+  const next = encodeURIComponent(path + window.location.search)
+
+  window.location.assign(`/signin?next=${next}`)
+}
+
 const removeLeadingSlash = (
   url: string,
 ): string => {
@@ -181,17 +219,21 @@ const http = {
     )
 
     if (!response.ok) {
-      const errorData =
-        (await response.json()) as IError
+      const errorData = await readJson<IError>(response)
+
+      if (response.status === 401) {
+        handleUnauthorized(formattedUrl)
+      }
 
       return Promise.reject({
-        message: handleError(errorData),
+        message: errorData
+          ? handleError(errorData)
+          : response.statusText || "Серверийн алдаа",
         status: response.status,
       })
     }
 
-    const data: T =
-      await response.json()
+    const data = (await readJson<T>(response)) as T
 
     return {
       body: data,

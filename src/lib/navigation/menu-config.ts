@@ -1,7 +1,7 @@
 import { UserRole } from '@/services/roles';
 import { LucideIcon } from 'lucide-react';
 
-export type MenuItemType = 'register' | 'report' | 'other';
+export type MenuItemType = 'register' | 'report' | 'other' | 'fuel';
 
 export type MenuItem = {
   name: string;
@@ -23,7 +23,7 @@ export type SubMenuItem = {
 
 export type MenuSection = {
   title: string;
-  key: 'register' | 'report' | 'other';
+  key: 'register' | 'report' | 'other' | 'fuel';
   items: MenuItem[];
   badge?: 'new' | 'pro';
 };
