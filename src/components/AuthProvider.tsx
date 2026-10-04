@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { message } from "antd"
 import { useRouter, usePathname } from "next/navigation"
 import { createContext, ReactNode, useContext, useEffect, useState } from "react"
@@ -35,6 +35,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const queryClient = useQueryClient()
 
   const [authState, setAuthState] = useState<{
     user: UserPrivate | undefined
@@ -63,6 +64,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const { mutate: logout, isPending: isLoggingOut } = useMutation({
     mutationFn: auth.logout,
     onSuccess: () => {
+      // Өмнөх хэрэглэгчийн өгөгдөл дараагийн хэрэглэгчид харагдахгүй байх ёстой.
+      queryClient.clear()
       setAuthState({ user: undefined, isInit: true })
       router.push("/signin")
     },
@@ -83,6 +86,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [isPublicRoute])
 
   const handleLogin = (loginResponse: UserPrivate) => {
+    queryClient.clear()
     setAuthState({ user: loginResponse, isInit: true })
 
     /**
