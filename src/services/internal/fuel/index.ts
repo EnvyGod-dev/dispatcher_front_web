@@ -5,6 +5,8 @@ import type {
   FuelBalance,
   FuelConsumptionReport,
   FuelDashboard,
+  FuelIssue,
+  FuelIssueInput,
   FuelNorm,
   FuelPeriodSummary,
   FuelMeasureMethod,
@@ -14,6 +16,7 @@ import type {
   FuelReceiptEditRequest,
   FuelReceiptInput,
   FuelRecipient,
+  FuelRefuelBreakdown,
   FuelRefueling,
   FuelRefuelingFilters,
   FuelRefuelingUpdate,
@@ -45,6 +48,9 @@ const fuelService = {
     http.put<FuelSupplier>(`${base}/suppliers/${id}`, { body: body(input) }),
 
   getVehicles: async () => (await http.get<FuelVehicle[]>(`${base}/vehicles`)).body,
+  /** Түгээгч машинууд (парк дугаар нь ST-ээр эхэлсэн эсвэл түгээгч гэж тэмдэглэсэн). */
+  getDispensers: async () =>
+    (await http.get<FuelVehicle[]>(`${base}/vehicles`, { params: { dispenserOnly: 'true' } })).body,
 
   getNorms: async () => (await http.get<FuelNorm[]>(`${base}/norms`)).body,
   upsertNorm: (input: {
@@ -77,6 +83,10 @@ const fuelService = {
     http.put<FuelRefueling>(`${base}/refuelings/${id}`, { body: body(input) }),
   cancelRefueling: (id: string, reason: string) =>
     http.post<FuelRefueling>(`${base}/refuelings/${id}/cancel`, { body: { reason } }),
+
+  getIssues: async (params: { from?: string; to?: string; tankId?: string; dispenserVehicleId?: string }) =>
+    (await http.get<FuelIssue[]>(`${base}/issues`, { params })).body,
+  createIssue: (input: FuelIssueInput) => http.post<FuelIssue>(`${base}/issues`, { body: body(input) }),
 
   getReceipts: async (params: { from?: string; to?: string; tankId?: string; supplierId?: string }) =>
     (await http.get<FuelReceipt[]>(`${base}/receipts`, { params })).body,
@@ -128,6 +138,8 @@ const fuelService = {
     (await http.get<FuelPeriodSummary>(`${base}/reports/summary`, { params: { from, to, granularity } })).body,
   getSupplierReport: async (from: string, to: string) =>
     (await http.get<FuelSupplierReport>(`${base}/reports/receipts-by-supplier`, { params: { from, to } })).body,
+  getRefuelBreakdown: async (from: string, to: string) =>
+    (await http.get<FuelRefuelBreakdown>(`${base}/reports/refuel-breakdown`, { params: { from, to } })).body,
   getConsumption: async (params: { from: string; to: string; shiftType?: string; vehicleModel?: string }) =>
     (await http.get<FuelConsumptionReport>(`${base}/consumption`, { params })).body,
   getAlerts: async (status?: FuelAlert['status']) =>

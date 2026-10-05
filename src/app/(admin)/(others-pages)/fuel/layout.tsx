@@ -11,6 +11,7 @@ const tabs = [
   { href: '/fuel', label: 'Тойм' },
   { href: '/fuel/refuelings', label: 'Олголт' },
   { href: '/fuel/receipts', label: 'Орлого' },
+  { href: '/fuel/issues', label: 'Зарлага' },
   { href: '/fuel/consumption', label: 'Зарцуулалт' },
   { href: '/fuel/reports', label: 'Тайлан' },
   { href: '/fuel/audit', label: 'Аудит', control: true },
@@ -41,7 +42,7 @@ export default function FuelLayout({ children }: { children: React.ReactNode }) 
           </span>
           <div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Түлш</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Олголт, орлого, үлдэгдэл, зарцуулалтын хяналт</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Олголт, орлого, зарлага, үлдэгдэл, зарцуулалтын хяналт</p>
           </div>
         </div>
         {!canControl && (

@@ -1,6 +1,7 @@
 'use client';
 
 import FuelTrendChart from '@/components/fuel/FuelTrendChart';
+import RefuelBreakdownReport from '@/components/fuel/RefuelBreakdownReport';
 import { Btn, Column, DataTable, DateRangeFilter, EmptyState, KpiCard, LoadingRows, Panel, Segmented } from '@/components/fuel/ui';
 import { exportExcel } from '@/lib/fuel/export';
 import { DateRange, fmtLiters, fmtNumber, fuelTypeLabel, rangePresets } from '@/lib/fuel/format';
@@ -37,14 +38,17 @@ const holderColumns = (nameHeader: string): Column<FuelHolderSummary>[] => [
 export default function FuelReportsPage() {
   const [range, setRange] = useState<DateRange>(rangePresets[4].range());
   const [granularity, setGranularity] = useState<Granularity>('day');
+  const [view, setView] = useState<'refuel' | 'balance'>('refuel');
 
   const summary = useQuery({
     queryKey: ['fuel', 'summary', range, granularity],
     queryFn: () => fuelService.getSummary(range.from, range.to, granularity),
+    enabled: view === 'balance',
   });
   const suppliers = useQuery({
     queryKey: ['fuel', 'supplier-report', range],
     queryFn: () => fuelService.getSupplierReport(range.from, range.to),
+    enabled: view === 'balance',
   });
 
   const data = summary.data;
@@ -146,11 +150,28 @@ export default function FuelReportsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <DateRangeFilter value={range} onChange={setRange} />
-        <Btn variant="primary" icon={<FileSpreadsheet className="size-4" />} onClick={handleExport} disabled={!data}>
-          Бүрэн тайлан (Excel)
-        </Btn>
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmented
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'refuel', label: 'Зарлагын тайлан' },
+              { value: 'balance', label: 'Баланс, орлого' },
+            ]}
+          />
+          <DateRangeFilter value={range} onChange={setRange} />
+        </div>
+        {view === 'balance' && (
+          <Btn variant="primary" icon={<FileSpreadsheet className="size-4" />} onClick={handleExport} disabled={!data}>
+            Бүрэн тайлан (Excel)
+          </Btn>
+        )}
       </div>
+
+      {view === 'refuel' ? (
+        <RefuelBreakdownReport range={range} />
+      ) : (
+        <>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <KpiCard label="Эхний үлдэгдэл" value={fmtLiters(t?.tankOpening)} loading={summary.isLoading} />
@@ -199,6 +220,8 @@ export default function FuelReportsPage() {
       <Panel title="Техникийн түлш авалт" description={`${equipment.length} техник · ${fmtNumber(equipment.reduce((s, e) => s + e.inflow, 0))} л`}>
         <DataTable columns={holderColumns('Техник')} rows={equipment} rowKey={(h) => h.holderId} loading={summary.isLoading} empty="Мэдээлэл алга" />
       </Panel>
+        </>
+      )}
     </div>
   );
 }

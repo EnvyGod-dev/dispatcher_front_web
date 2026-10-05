@@ -1,8 +1,8 @@
 import { useAuth } from '@/components/AuthProvider';
 import { UserRole } from '@/services/roles';
-import { fuelControlRoles, fuelViewRoles } from './roles';
+import { fuelApproveRoles, fuelControlRoles, fuelViewRoles } from './roles';
 
-export { fuelControlRoles, fuelViewRoles };
+export { fuelApproveRoles, fuelControlRoles, fuelViewRoles };
 
 export const useFuelPermissions = () => {
   const { user } = useAuth();
@@ -11,5 +11,6 @@ export const useFuelPermissions = () => {
   return {
     canView: !!role && fuelViewRoles.includes(role),
     canControl: !!role && fuelControlRoles.includes(role),
+    canApprove: !!role && fuelApproveRoles.includes(role),
   };
 };

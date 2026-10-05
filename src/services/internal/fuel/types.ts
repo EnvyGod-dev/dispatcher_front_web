@@ -46,6 +46,7 @@ export interface FuelRefueling {
   clientId: string | null;
   sourceType: 'tank' | 'dispenser';
   tankId: string | null;
+  dispenserVehicleId: string | null;
   receiverVehicleId: string;
   quantity: string;
   refueledAt: string;
@@ -60,6 +61,7 @@ export interface FuelRefueling {
   receiverName: string | null;
   receiverModel: string | null;
   tankName: string | null;
+  dispenserMineNumber: string | null;
   createdAt: string;
 }
 
@@ -313,4 +315,64 @@ export interface FuelMeasurement {
   applyAdjustment: boolean;
   notes: string | null;
   tankName: string | null;
+}
+
+/** Зарлага: агуулахаас түгээгч машин (ST...) руу шилжүүлсэн түлш. */
+export interface FuelIssue {
+  id: string;
+  tankId: string;
+  dispenserVehicleId: string;
+  quantity: string;
+  issuedAt: string;
+  operationalDate: string;
+  notes: string | null;
+  createdAt: string;
+  tankName: string;
+  dispenserMineNumber: string | null;
+  dispenserName: string;
+}
+
+export interface FuelIssueInput {
+  tankId: string;
+  dispenserVehicleId: string;
+  quantity: number;
+  issuedAt: string;
+  notes?: string | null;
+}
+
+export interface FuelBreakdownVehicle {
+  vehicleId: string;
+  mineNumber: string | null;
+  name: string;
+  vehicleNumber: string | null;
+  model: string | null;
+  type: string | null;
+  owner: string | null;
+  liters: number;
+  count: number;
+  day: number;
+  night: number;
+}
+
+export interface FuelBreakdownSource {
+  key: string;
+  label: string;
+  kind: 'tank' | 'dispenser';
+  liters: number;
+  count: number;
+  meterGap: number;
+}
+
+/** Зарлагын (түлш олголтын) задаргаа тайлан. */
+export interface FuelRefuelBreakdown {
+  from: string;
+  to: string;
+  total: number;
+  day: number;
+  night: number;
+  count: number;
+  daysWithRefuel: number;
+  days: { date: string; day: number; night: number; other: number }[];
+  vehicles: FuelBreakdownVehicle[];
+  sources: FuelBreakdownSource[];
 }
