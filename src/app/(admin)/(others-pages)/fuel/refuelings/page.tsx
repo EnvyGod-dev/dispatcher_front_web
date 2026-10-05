@@ -134,7 +134,22 @@ export default function FuelRefuelingsPage() {
         </div>
       ),
     },
-    { key: 'tank', header: 'Агуулах', render: (r) => r.tankName ?? '—' },
+    {
+      key: 'source',
+      header: 'Эх үүсвэр',
+      render: (r) =>
+        r.sourceType === 'dispenser' ? (
+          <div>
+            <p className="font-medium text-gray-800 dark:text-white/90">{r.dispenserMineNumber ?? '—'}</p>
+            <p className="text-xs text-gray-500">Түгээгч машин</p>
+          </div>
+        ) : (
+          <div>
+            <p className="font-medium text-gray-800 dark:text-white/90">{r.tankName ?? '—'}</p>
+            <p className="text-xs text-gray-500">Агуулах</p>
+          </div>
+        ),
+    },
     {
       key: 'meter',
       header: 'Тоолуур',
@@ -233,7 +248,7 @@ export default function FuelRefuelingsPage() {
             { header: 'Парк №', value: (r) => r.receiverMineNumber ?? '', width: 12 },
             { header: 'Техник', value: (r) => r.receiverName ?? '', width: 18 },
             { header: 'Модел', value: (r) => r.receiverModel ?? '', width: 14 },
-            { header: 'Агуулах', value: (r) => r.tankName ?? '', width: 14 },
+            { header: 'Эх үүсвэр', value: (r) => (r.sourceType === 'dispenser' ? r.dispenserMineNumber : r.tankName) ?? '', width: 14 },
             { header: 'Эхний заалт', value: (r) => (r.meterStart ? toNum(r.meterStart) : ''), width: 14 },
             { header: 'Төгсгөлийн заалт', value: (r) => (r.meterEnd ? toNum(r.meterEnd) : ''), width: 16 },
             { header: 'Литр', value: (r) => toNum(r.quantity), width: 10 },

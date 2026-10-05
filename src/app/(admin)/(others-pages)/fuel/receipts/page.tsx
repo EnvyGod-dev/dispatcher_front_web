@@ -404,7 +404,7 @@ function EditRequestDialog({ receipt, onClose }: { receipt: FuelReceipt; onClose
 }
 
 function EditRequests() {
-  const { canControl } = useFuelPermissions();
+  const { canApprove } = useFuelPermissions();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<FuelReceiptEditRequest['status']>('pending');
   const [reviewing, setReviewing] = useState<{ request: FuelReceiptEditRequest; approve: boolean } | null>(null);
@@ -472,7 +472,7 @@ function EditRequests() {
         </div>
       ),
     },
-    ...(status === 'pending' && canControl
+    ...(status === 'pending' && canApprove
       ? [
           {
             key: 'actions',
@@ -503,7 +503,7 @@ function EditRequests() {
   return (
     <Panel
       title="Орлогын засварын хүсэлт"
-      description="Хүсэлт илгээсэн хүн өөрөө батлах боломжгүй."
+      description={canApprove ? 'Хүсэлт илгээсэн хүн өөрөө батлах боломжгүй.' : 'Хүсэлтийг зөвхөн админ батална.'}
       action={
         <Segmented
           size="sm"
