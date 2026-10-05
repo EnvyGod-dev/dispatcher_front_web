@@ -222,6 +222,10 @@ export default function RefuelBreakdownReport({ range }: { range: DateRange }) {
             { header: 'Тоолуурын зөрүү', value: (s: FuelBreakdownSource) => s.meterGap, width: 16 },
           ],
         },
+        rankSheet(
+          'Ээлж',
+          (data.crews ?? []).map((c) => ({ label: `${c.label} ээлж`, liters: c.liters, hint: `${c.vehicles} техник` })),
+        ),
         rankSheet('Төрөл', byType),
         rankSheet('Марк', byModel),
         rankSheet('Эзэмшигч', byOwner),
@@ -285,6 +289,14 @@ export default function RefuelBreakdownReport({ range }: { range: DateRange }) {
           ]}
         />
       </div>
+
+      {(data.crews ?? []).some((c) => c.liters > 0) && (
+        <RankList
+          title="Ээлжээр (А/Б/В/Г)"
+          total={total}
+          items={(data.crews ?? []).map((c) => ({ label: `${c.label} ээлж`, liters: c.liters, hint: `${c.count} олголт · ${c.vehicles} техник` }))}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <RankList title="Төрлөөр" items={byType} total={total} />

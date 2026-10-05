@@ -62,6 +62,11 @@ export interface FuelRefueling {
   receiverModel: string | null;
   tankName: string | null;
   dispenserMineNumber: string | null;
+  /** Ажлын өдөр, ээлжийн төрлөөс автоматаар тооцсон ээлж (А/Б/В/Г). */
+  crew?: 'A' | 'B' | 'C' | 'D' | null;
+  crewLabel?: string | null;
+  /** Тухайн ээлжид техникийг жолоодсон оператор. */
+  shiftDriverName?: string | null;
   createdAt: string;
 }
 
@@ -372,7 +377,9 @@ export interface FuelRefuelBreakdown {
   night: number;
   count: number;
   daysWithRefuel: number;
-  days: { date: string; day: number; night: number; other: number }[];
+  days: { date: string; day: number; night: number; other: number; dayCrew?: string | null; nightCrew?: string | null }[];
   vehicles: FuelBreakdownVehicle[];
   sources: FuelBreakdownSource[];
+  /** Ээлжээр (А/Б/В/Г). */
+  crews?: { crew: string; label: string; liters: number; count: number; vehicles: number }[];
 }

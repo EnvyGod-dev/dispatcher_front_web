@@ -147,3 +147,12 @@ export const hasPermission = (
 
   return requiredRoles.includes(userRole);
 };
+/** Уулын ажлын нэгдсэн тайлан (backend: /mining-report). */
+export const miningReportRoles = [
+  UserRole.SUPERADMIN,
+  UserRole.ADMIN,
+  UserRole.DISPATCHER,
+  UserRole.MANAGER,
+  UserRole.ITA,
+  UserRole.MARKSCHEIDER,
+] as const;

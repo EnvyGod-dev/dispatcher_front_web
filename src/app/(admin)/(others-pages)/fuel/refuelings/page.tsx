@@ -122,7 +122,12 @@ export default function FuelRefuelingsPage() {
     {
       key: 'shift',
       header: 'Ээлж',
-      render: (r) => <Pill tone={r.shiftType === 'night' ? 'blue' : 'amber'}>{shiftLabel(r.shiftType)}</Pill>,
+      render: (r) => (
+        <Pill tone={r.shiftType === 'night' ? 'blue' : 'amber'}>
+          {shiftLabel(r.shiftType)}
+          {r.crewLabel ? ` · ${r.crewLabel}` : ''}
+        </Pill>
+      ),
     },
     {
       key: 'vehicle',
@@ -130,7 +135,9 @@ export default function FuelRefuelingsPage() {
       render: (r) => (
         <div>
           <p className="font-medium text-gray-800 dark:text-white/90">{vehicleLabel(r)}</p>
-          {r.receiverModel && <p className="text-xs text-gray-500">{r.receiverModel}</p>}
+          {(r.receiverModel || r.shiftDriverName) && (
+            <p className="text-xs text-gray-500">{[r.receiverModel, r.shiftDriverName].filter(Boolean).join(' · ')}</p>
+          )}
         </div>
       ),
     },
@@ -245,6 +252,8 @@ export default function FuelRefuelingsPage() {
             { header: 'Огноо цаг', value: (r) => fmtDateTime(r.refueledAt), width: 18 },
             { header: 'Ажлын өдөр', value: (r) => r.operationalDate, width: 12 },
             { header: 'Ээлж', value: (r) => shiftLabel(r.shiftType), width: 8 },
+            { header: 'Бригад', value: (r) => r.crewLabel ?? '', width: 8 },
+            { header: 'Оператор', value: (r) => r.shiftDriverName ?? '', width: 16 },
             { header: 'Парк №', value: (r) => r.receiverMineNumber ?? '', width: 12 },
             { header: 'Техник', value: (r) => r.receiverName ?? '', width: 18 },
             { header: 'Модел', value: (r) => r.receiverModel ?? '', width: 14 },
@@ -254,7 +263,7 @@ export default function FuelRefuelingsPage() {
             { header: 'Литр', value: (r) => toNum(r.quantity), width: 10 },
             { header: 'Тайлбар', value: (r) => r.notes ?? '', width: 30 },
           ],
-          totals: ['Нийт', '', '', '', '', '', '', '', '', total, ''],
+          totals: ['Нийт', '', '', '', '', '', '', '', '', '', '', total, ''],
         },
         {
           name: 'Техникээр',
