@@ -19,6 +19,7 @@ import {
   inspectionReadRoles,
   markscheiderReportReadRoles,
   miningBlockReadRoles,
+  miningReportRoles,
   miningRouteReadRoles,
   stockpileReadRoles,
 } from '@/services/roles';
@@ -34,6 +35,13 @@ export const menuSections: MenuSection[] = [
     title: 'Тайлан',
     key: 'report',
     items: [
+      {
+        icon: Mountain,
+        name: 'Уулын ажлын нэгдсэн тайлан',
+        path: '/mining-report',
+        type: 'report',
+        roles: miningReportRoles,
+      },
       {
         icon: FileChartColumn,
         name: 'Уулын ажлын тайлан',
@@ -86,6 +94,7 @@ export const menuSections: MenuSection[] = [
           { name: 'Тойм', path: '/fuel', roles: fuelViewRoles },
           { name: 'Олголт', path: '/fuel/refuelings', roles: fuelViewRoles },
           { name: 'Орлого', path: '/fuel/receipts', roles: fuelViewRoles },
+          { name: 'Зарлага', path: '/fuel/issues', roles: fuelViewRoles },
           { name: 'Зарцуулалт', path: '/fuel/consumption', roles: fuelViewRoles },
           { name: 'Тайлан', path: '/fuel/reports', roles: fuelViewRoles },
           { name: 'Аудит', path: '/fuel/audit', roles: fuelControlRoles },
