@@ -15,7 +15,7 @@ import {
   TextInput,
 } from '@/components/fuel/ui';
 import { exportExcel } from '@/lib/fuel/export';
-import { DateRange, errorMessage, fmtDateTime, fmtLiters, rangePresets, toNum } from '@/lib/fuel/format';
+import { DateRange, errorMessage, fmtDateTime, fmtLiters, padReading, rangePresets, readingDelta, toNum } from '@/lib/fuel/format';
 import { useFuelPermissions } from '@/lib/fuel/permissions';
 import fuelService from '@/services/internal/fuel';
 import type { FuelIssue, FuelVehicle } from '@/services/internal/fuel/types';
@@ -66,6 +66,18 @@ export default function FuelIssuesPage() {
           )}
         </div>
       ),
+    },
+    {
+      key: 'meter',
+      header: 'Агуулахын тоолуур',
+      render: (r) =>
+        r.meterStartReading && r.meterEndReading ? (
+          <span className="font-mono text-xs tabular-nums text-gray-600 dark:text-gray-400">
+            {r.meterStartReading} → {r.meterEndReading}
+          </span>
+        ) : (
+          <span className="text-gray-400">—</span>
+        ),
     },
     {
       key: 'qty',
@@ -151,6 +163,7 @@ export default function FuelIssuesPage() {
 function CreateIssueDialog({ dispensers, onClose }: { dispensers: FuelVehicle[]; onClose: () => void }) {
   const queryClient = useQueryClient();
   const tanks = useQuery({ queryKey: ['fuel', 'tanks'], queryFn: fuelService.getTanks });
+  const meters = useQuery({ queryKey: ['fuel', 'meters'], queryFn: fuelService.getMeters });
 
   const activeTanks = (tanks.data ?? []).filter((t) => t.isActive);
   const [tankId, setTankId] = useState('');
@@ -161,12 +174,26 @@ function CreateIssueDialog({ dispensers, onClose }: { dispensers: FuelVehicle[];
 
   const effectiveTank = tankId || (activeTanks.length === 1 ? activeTanks[0].id : '');
 
+  // Агуулахын тоолуур бүртгэгдсэн бол заалтаар (эхний заалт тоолуураас автоматаар) бүртгэнэ.
+  const meter = (meters.data ?? []).find((m) => m.holderType === 'tank' && m.holderId === effectiveTank) ?? null;
+  const [byMeter, setByMeter] = useState(true);
+  const useMeter = !!meter && byMeter;
+  const [meterStart, setMeterStart] = useState('');
+  const [meterEnd, setMeterEnd] = useState('');
+  const [startTouched, setStartTouched] = useState(false);
+  const startValue = startTouched ? meterStart : (meter?.reading ?? '');
+  const startReading = padReading(startValue, meter?.digits);
+  const endReading = padReading(meterEnd, meter?.digits);
+  const meterQty = useMeter && meterEnd ? readingDelta(startReading, endReading, meter?.digits) : null;
+
   const mutation = useMutation({
     mutationFn: () =>
       fuelService.createIssue({
         tankId: effectiveTank,
         dispenserVehicleId: dispenserId,
-        quantity: toNum(quantity),
+        quantity: useMeter ? null : toNum(quantity),
+        meterStart: useMeter ? startReading : null,
+        meterEnd: useMeter ? endReading : null,
         issuedAt: dayjs(issuedAt).toISOString(),
         notes: notes.trim() || null,
       }),
@@ -178,7 +205,12 @@ function CreateIssueDialog({ dispensers, onClose }: { dispensers: FuelVehicle[];
     onError: (e) => toast.error(errorMessage(e)),
   });
 
-  const invalid = !effectiveTank || !dispenserId || toNum(quantity) <= 0 || !issuedAt || !dayjs(issuedAt).isValid();
+  const invalid =
+    !effectiveTank ||
+    !dispenserId ||
+    (useMeter ? !meterQty || meterQty <= 0 : toNum(quantity) <= 0) ||
+    !issuedAt ||
+    !dayjs(issuedAt).isValid();
 
   return (
     <Dialog
@@ -199,7 +231,11 @@ function CreateIssueDialog({ dispensers, onClose }: { dispensers: FuelVehicle[];
         <Field label="Агуулах">
           <SelectInput
             value={tankId}
-            onChange={setTankId}
+            onChange={(value) => {
+              setTankId(value);
+              setStartTouched(false);
+              setMeterEnd('');
+            }}
             placeholder="Сонгох"
             options={activeTanks.map((t) => ({ value: t.id, label: t.name }))}
           />
@@ -239,10 +275,52 @@ function CreateIssueDialog({ dispensers, onClose }: { dispensers: FuelVehicle[];
           </span>
         )}
       </div>
+      {meter && (
+        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input type="checkbox" checked={byMeter} onChange={(e) => setByMeter(e.target.checked)} />
+          Агуулахын тоолуураар ({meter.digits} оронтой)
+        </label>
+      )}
+      {useMeter && meter && (
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Эхний заалт">
+            <TextInput
+              inputMode="numeric"
+              className="font-mono tracking-wider"
+              maxLength={meter.digits}
+              value={startValue}
+              onChange={(e) => {
+                setStartTouched(true);
+                setMeterStart(e.target.value.replace(/\D/g, '').slice(0, meter.digits));
+              }}
+            />
+          </Field>
+          <Field label="Төгсгөлийн заалт">
+            <TextInput
+              inputMode="numeric"
+              autoFocus
+              className="font-mono tracking-wider"
+              maxLength={meter.digits}
+              placeholder={'0'.repeat(meter.digits)}
+              value={meterEnd}
+              onChange={(e) => setMeterEnd(e.target.value.replace(/\D/g, '').slice(0, meter.digits))}
+            />
+          </Field>
+          <p className="col-span-2 text-sm text-gray-600 dark:text-gray-400">
+            Шилжүүлсэн хэмжээ:{' '}
+            <span className={meterQty && meterQty > 0 ? 'font-semibold text-gray-900 dark:text-white' : 'font-semibold text-error-600'}>
+              {meterEnd ? (meterQty && meterQty > 0 ? fmtLiters(meterQty) : 'Төгсгөлийн заалт их байх ёстой') : '—'}
+            </span>
+            <span className="block text-xs text-gray-500">Эхний заалт тоолуурын сүүлийн заалтаас бөглөгдсөн, зөрвөл засна уу.</span>
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Хэмжээ (литр)">
-          <TextInput inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value.replace(/[^\d.]/g, ''))} />
-        </Field>
+        {!useMeter && (
+          <Field label="Хэмжээ (литр)">
+            <TextInput inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value.replace(/[^\d.]/g, ''))} />
+          </Field>
+        )}
         <Field label="Огноо, цаг">
           <TextInput type="datetime-local" value={issuedAt} onChange={(e) => setIssuedAt(e.target.value)} />
         </Field>

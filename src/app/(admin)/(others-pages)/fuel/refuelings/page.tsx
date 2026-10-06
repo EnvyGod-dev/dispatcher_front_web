@@ -24,8 +24,9 @@ import {
   errorMessage,
   fmtDateTime,
   fmtLiters,
-  fmtMeter,
-  METER_DIGITS,
+  meterText,
+  padReading,
+  readingDelta,
   rangePresets,
   shiftLabel,
   toNum,
@@ -164,7 +165,7 @@ export default function FuelRefuelingsPage() {
       render: (r) =>
         r.meterStart !== null && r.meterEnd !== null ? (
           <span className="font-mono text-xs tabular-nums text-gray-600 dark:text-gray-400">
-            {fmtMeter(r.meterStart)} → {fmtMeter(r.meterEnd)}
+            {meterText(r.meterStartReading, r.meterStart)} → {meterText(r.meterEndReading, r.meterEnd)}
           </span>
         ) : (
           <span className="text-gray-400">—</span>
@@ -412,13 +413,19 @@ function EditRefuelingDialog({
   const [tankId, setTankId] = useState(refueling.tankId ?? '');
   const [vehicleId, setVehicleId] = useState(refueling.receiverVehicleId);
   const [quantity, setQuantity] = useState(String(toNum(refueling.quantity)));
-  const [meterStart, setMeterStart] = useState(hasMeter ? fmtMeter(refueling.meterStart) : '');
-  const [meterEnd, setMeterEnd] = useState(hasMeter ? fmtMeter(refueling.meterEnd) : '');
+  const initialStart = meterText(refueling.meterStartReading, refueling.meterStart) ?? '';
+  const initialEnd = meterText(refueling.meterEndReading, refueling.meterEnd) ?? '';
+  // Хадгалсан заалт тоолуурын оронгоор 0-оор нөхөгдсөн тул уртаар нь оронгийн тоог мэднэ.
+  const digits = refueling.meterStartReading ? refueling.meterStartReading.length : null;
+  const [meterStart, setMeterStart] = useState(hasMeter ? initialStart : '');
+  const [meterEnd, setMeterEnd] = useState(hasMeter ? initialEnd : '');
   const [shift, setShift] = useState<FuelShiftType>(refueling.shiftType ?? 'day');
   const [notes, setNotes] = useState(refueling.notes ?? '');
   const [reason, setReason] = useState('');
 
-  const meterQty = hasMeter ? toNum(meterEnd) - toNum(meterStart) : null;
+  const startReading = padReading(meterStart, digits);
+  const endReading = padReading(meterEnd, digits);
+  const meterQty = hasMeter ? readingDelta(startReading, endReading, digits) : null;
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -426,10 +433,10 @@ function EditRefuelingDialog({
       if (tankId && tankId !== refueling.tankId) changes.tankId = tankId;
       if (vehicleId !== refueling.receiverVehicleId) changes.receiverVehicleId = vehicleId;
       if (hasMeter) {
-        if (toNum(meterStart) !== toNum(refueling.meterStart) || toNum(meterEnd) !== toNum(refueling.meterEnd)) {
-          changes.meterStart = toNum(meterStart);
-          changes.meterEnd = toNum(meterEnd);
-          changes.quantity = meterQty;
+        // Литрийг сервер заалтаас тооцно (тоолуур дүүрч эргэсэн бол ч зөв).
+        if (startReading !== initialStart || endReading !== initialEnd) {
+          changes.meterStart = startReading;
+          changes.meterEnd = endReading;
         }
       } else if (toNum(quantity) !== toNum(refueling.quantity)) {
         changes.quantity = toNum(quantity);
@@ -485,10 +492,10 @@ function EditRefuelingDialog({
       {hasMeter ? (
         <div className="grid grid-cols-2 gap-3">
           <Field label="Эхний заалт">
-            <TextInput inputMode="numeric" maxLength={METER_DIGITS} value={meterStart} onChange={(e) => setMeterStart(e.target.value.replace(/\D/g, '').slice(0, METER_DIGITS))} className="font-mono" />
+            <TextInput inputMode="numeric" maxLength={digits ?? undefined} value={meterStart} onChange={(e) => setMeterStart(e.target.value.replace(/\D/g, '').slice(0, digits ?? undefined))} className="font-mono" />
           </Field>
           <Field label="Төгсгөлийн заалт">
-            <TextInput inputMode="numeric" maxLength={METER_DIGITS} value={meterEnd} onChange={(e) => setMeterEnd(e.target.value.replace(/\D/g, '').slice(0, METER_DIGITS))} className="font-mono" />
+            <TextInput inputMode="numeric" maxLength={digits ?? undefined} value={meterEnd} onChange={(e) => setMeterEnd(e.target.value.replace(/\D/g, '').slice(0, digits ?? undefined))} className="font-mono" />
           </Field>
           <p className="col-span-2 text-sm text-gray-600 dark:text-gray-400">
             Цэнэглэсэн хэмжээ:{' '}
