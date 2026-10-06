@@ -26,6 +26,7 @@ import { useFuelPermissions } from "@/lib/fuel/permissions";
 import fuelService from "@/services/internal/fuel";
 import type {
   FuelMeasureMethod,
+  FuelMeter,
   FuelNorm,
   FuelRecipient,
   FuelSupplier,
@@ -38,7 +39,7 @@ import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-type Section = "tanks" | "suppliers" | "norms" | "general";
+type Section = "tanks" | "meters" | "suppliers" | "norms" | "general";
 
 const useInvalidate = () => {
   const queryClient = useQueryClient();
@@ -60,12 +61,14 @@ export default function FuelSettingsPage() {
         onChange={setSection}
         options={[
           { value: "tanks", label: "Агуулах" },
+          { value: "meters", label: "Тоолуур" },
           { value: "suppliers", label: "Нийлүүлэгч" },
           { value: "norms", label: "Зарцуулалтын норм" },
           { value: "general", label: "Ерөнхий" },
         ]}
       />
       {section === "tanks" && <TanksSection />}
+      {section === "meters" && <MetersSection />}
       {section === "suppliers" && <SuppliersSection />}
       {section === "norms" && <NormsSection />}
       {section === "general" && <GeneralSection />}
@@ -736,6 +739,205 @@ function SupplierDialog({
         </Field>
       </div>
       <ActiveToggle value={isActive} onChange={setIsActive} />
+    </Dialog>
+  );
+}
+
+// ─── Meters ────────────────────────────────────────────────
+
+type MeterHolder = {
+  holderType: "tank" | "dispenser";
+  holderId: string;
+  name: string;
+  hint: string | null;
+  meter: FuelMeter | null;
+};
+
+function MetersSection() {
+  const invalidate = useInvalidate();
+  const tanks = useQuery({ queryKey: ["fuel", "tanks"], queryFn: fuelService.getTanks });
+  const dispensers = useQuery({ queryKey: ["fuel", "dispensers"], queryFn: fuelService.getDispensers });
+  const meters = useQuery({ queryKey: ["fuel", "meters"], queryFn: fuelService.getMeters });
+  const [editing, setEditing] = useState<MeterHolder | null>(null);
+
+  const meterBy = new Map((meters.data ?? []).map((m) => [`${m.holderType}:${m.holderId}`, m]));
+  const rows: MeterHolder[] = [
+    ...(dispensers.data ?? []).map((d) => ({
+      holderType: "dispenser" as const,
+      holderId: d.id,
+      name: d.mineNumber ?? d.name,
+      hint: "Түгээгч машин",
+      meter: meterBy.get(`dispenser:${d.id}`) ?? null,
+    })),
+    ...(tanks.data ?? [])
+      .filter((t) => t.isActive || meterBy.has(`tank:${t.id}`))
+      .map((t) => ({
+        holderType: "tank" as const,
+        holderId: t.id,
+        name: t.name,
+        hint: "Агуулах",
+        meter: meterBy.get(`tank:${t.id}`) ?? null,
+      })),
+  ];
+
+  const remove = useMutation({
+    mutationFn: (id: string) => fuelService.deleteMeter(id),
+    onSuccess: () => {
+      toast.success("Тоолуур устгагдлаа");
+      invalidate();
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+
+  const columns: Column<MeterHolder>[] = [
+    {
+      key: "name",
+      header: "Эх үүсвэр",
+      render: (r) => (
+        <div>
+          <p className="font-medium text-gray-800 dark:text-white/90">{r.name}</p>
+          <p className="text-xs text-gray-500">{r.hint}</p>
+        </div>
+      ),
+    },
+    {
+      key: "reading",
+      header: "Одоогийн заалт",
+      render: (r) =>
+        r.meter ? (
+          <span className="font-mono text-base tracking-wider tabular-nums text-gray-900 dark:text-white">
+            {r.meter.reading}
+          </span>
+        ) : (
+          <span className="text-gray-400">Тоолуургүй</span>
+        ),
+    },
+    { key: "digits", header: "Орон", render: (r) => (r.meter ? r.meter.digits : "—") },
+    { key: "at", header: "Сүүлд", render: (r) => (r.meter ? fmtDateTime(r.meter.readingAt) : "—") },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      render: (r) => (
+        <div className="flex justify-end gap-1">
+          <IconBtn
+            label={r.meter ? "Заалт шинэчлэх" : "Тоолуур бүртгэх"}
+            icon={r.meter ? <Pencil className="size-4" /> : <Plus className="size-4" />}
+            onClick={() => setEditing(r)}
+          />
+          {r.meter && (
+            <IconBtn
+              label="Устгах"
+              icon={<Trash2 className="size-4" />}
+              onClick={() => {
+                if (window.confirm(`${r.name}: тоолуурыг устгах уу? Өмнөх олголтын заалтууд хэвээр үлдэнэ.`)) {
+                  remove.mutate(r.meter!.id);
+                }
+              }}
+            />
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <Panel
+      title="Тоолуур"
+      description="Агуулах, түгээгч машины тоолуурын оронгийн тоо, одоогийн заалт. Олголт, зарлагын эхний заалт эндээс автоматаар бөглөгдөж, заалт бүрээр үргэлжилнэ. Урд талын 0-ууд хадгалагдана."
+    >
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => `${r.holderType}:${r.holderId}`}
+        loading={tanks.isLoading || dispensers.isLoading || meters.isLoading}
+        empty="Агуулах, түгээгч машин бүртгэгдээгүй"
+      />
+      {editing && <MeterDialog holder={editing} onClose={() => setEditing(null)} />}
+    </Panel>
+  );
+}
+
+function MeterDialog({ holder, onClose }: { holder: MeterHolder; onClose: () => void }) {
+  const invalidate = useInvalidate();
+  const meter = holder.meter;
+  const [digits, setDigits] = useState(String(meter?.digits ?? 7));
+  const [reading, setReading] = useState(meter?.reading ?? "");
+  const [notes, setNotes] = useState("");
+
+  const digitCount = Number(digits);
+  const digitsValid = Number.isInteger(digitCount) && digitCount >= 1 && digitCount <= 30;
+  const readingValid = /^\d+$/.test(reading) && (!digitsValid || reading.length <= digitCount);
+
+  const mutation = useMutation({
+    mutationFn: () => {
+      const input = {
+        holderType: holder.holderType,
+        holderId: holder.holderId,
+        digits: digitCount,
+        reading: reading.padStart(digitCount, "0"),
+        notes: notes.trim() || null,
+      };
+      return meter ? fuelService.updateMeter(meter.id, input) : fuelService.createMeter(input);
+    },
+    onSuccess: () => {
+      toast.success(meter ? "Заалт шинэчлэгдлээ" : "Тоолуур бүртгэгдлээ");
+      invalidate();
+      onClose();
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={meter ? "Заалт шинэчлэх" : "Тоолуур бүртгэх"}
+      description={`${holder.name} · ${holder.hint}`}
+      footer={
+        <>
+          <Btn onClick={onClose}>Болих</Btn>
+          <Btn
+            variant="primary"
+            disabled={!digitsValid || !readingValid}
+            loading={mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            Хадгалах
+          </Btn>
+        </>
+      }
+    >
+      <div className="grid grid-cols-3 gap-3">
+        <Field label="Оронгийн тоо">
+          <TextInput
+            inputMode="numeric"
+            value={digits}
+            onChange={(e) => setDigits(e.target.value.replace(/\D/g, "").slice(0, 2))}
+          />
+        </Field>
+        <div className="col-span-2">
+          <Field label={digitsValid ? `Одоогийн заалт (${digitCount} оронтой)` : "Одоогийн заалт"}>
+            <TextInput
+              inputMode="numeric"
+              autoFocus
+              value={reading}
+              maxLength={digitsValid ? digitCount : undefined}
+              onChange={(e) =>
+                setReading(e.target.value.replace(/\D/g, "").slice(0, digitsValid ? digitCount : undefined))
+              }
+              className="font-mono tracking-wider"
+              placeholder={digitsValid ? "0".repeat(digitCount) : ""}
+            />
+          </Field>
+        </div>
+      </div>
+      {digitsValid && reading && reading.length < digitCount && (
+        <p className="text-xs text-gray-500">Хадгалахад: {reading.padStart(digitCount, "0")}</p>
+      )}
+      <Field label="Тайлбар (тоолуур сольсон гэх мэт)">
+        <TextArea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+      </Field>
     </Dialog>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import FuelFlowsReport from '@/components/fuel/FuelFlowsReport';
 import FuelTrendChart from '@/components/fuel/FuelTrendChart';
 import RefuelBreakdownReport from '@/components/fuel/RefuelBreakdownReport';
 import { Btn, Column, DataTable, DateRangeFilter, EmptyState, KpiCard, LoadingRows, Panel, Segmented } from '@/components/fuel/ui';
@@ -38,7 +39,7 @@ const holderColumns = (nameHeader: string): Column<FuelHolderSummary>[] => [
 export default function FuelReportsPage() {
   const [range, setRange] = useState<DateRange>(rangePresets[4].range());
   const [granularity, setGranularity] = useState<Granularity>('day');
-  const [view, setView] = useState<'refuel' | 'balance'>('refuel');
+  const [view, setView] = useState<'refuel' | 'flows' | 'balance'>('refuel');
 
   const summary = useQuery({
     queryKey: ['fuel', 'summary', range, granularity],
@@ -156,6 +157,7 @@ export default function FuelReportsPage() {
             onChange={setView}
             options={[
               { value: 'refuel', label: 'Зарлагын тайлан' },
+              { value: 'flows', label: 'Агуулах ба нийлүүлэгч' },
               { value: 'balance', label: 'Баланс, орлого' },
             ]}
           />
@@ -170,6 +172,8 @@ export default function FuelReportsPage() {
 
       {view === 'refuel' ? (
         <RefuelBreakdownReport range={range} />
+      ) : view === 'flows' ? (
+        <FuelFlowsReport range={range} />
       ) : (
         <>
 

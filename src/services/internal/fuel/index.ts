@@ -1,5 +1,8 @@
 import http from '../../index';
 import type {
+  FuelFlows,
+  FuelMeter,
+  FuelMeterInput,
   FuelAlert,
   FuelAuditLog,
   FuelBalance,
@@ -138,6 +141,13 @@ const fuelService = {
     (await http.get<FuelPeriodSummary>(`${base}/reports/summary`, { params: { from, to, granularity } })).body,
   getSupplierReport: async (from: string, to: string) =>
     (await http.get<FuelSupplierReport>(`${base}/reports/receipts-by-supplier`, { params: { from, to } })).body,
+  getFlows: async (from: string, to: string) =>
+    (await http.get<FuelFlows>(`${base}/reports/flows`, { params: { from, to } })).body,
+  getMeters: async () => (await http.get<FuelMeter[]>(`${base}/meters`)).body,
+  createMeter: (input: FuelMeterInput) => http.post<FuelMeter>(`${base}/meters`, { body: body(input) }),
+  updateMeter: (id: string, input: FuelMeterInput) =>
+    http.put<FuelMeter>(`${base}/meters/${id}`, { body: body({ digits: input.digits, reading: input.reading, notes: input.notes }) }),
+  deleteMeter: (id: string) => http.delete<FuelMeter>(`${base}/meters/${id}`),
   getRefuelBreakdown: async (from: string, to: string) =>
     (await http.get<FuelRefuelBreakdown>(`${base}/reports/refuel-breakdown`, { params: { from, to } })).body,
   getConsumption: async (params: { from: string; to: string; shiftType?: string; vehicleModel?: string }) =>

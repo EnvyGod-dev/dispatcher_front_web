@@ -54,6 +54,9 @@ export interface FuelRefueling {
   shiftType: FuelShiftType | null;
   meterStart: string | null;
   meterEnd: string | null;
+  /** Бичсэн хэлбэрээр нь (урд талын 0-уудтай) заалт. Хуучин бичлэгт null. */
+  meterStartReading?: string | null;
+  meterEndReading?: string | null;
   notes: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
@@ -83,8 +86,9 @@ export interface FuelRefuelingUpdate {
   tankId?: string;
   receiverVehicleId?: string;
   quantity?: number | null;
-  meterStart?: number | null;
-  meterEnd?: number | null;
+  /** Заалт (урд талын 0-уудтай цифр). */
+  meterStart?: string | null;
+  meterEnd?: string | null;
   shiftType?: FuelShiftType | null;
   notes?: string | null;
   reason: string;
@@ -328,6 +332,8 @@ export interface FuelIssue {
   tankId: string;
   dispenserVehicleId: string;
   quantity: string;
+  meterStartReading?: string | null;
+  meterEndReading?: string | null;
   issuedAt: string;
   operationalDate: string;
   notes: string | null;
@@ -340,7 +346,10 @@ export interface FuelIssue {
 export interface FuelIssueInput {
   tankId: string;
   dispenserVehicleId: string;
-  quantity: number;
+  /** Литрээр, эсвэл агуулахын тоолуурын заалтаар (сервер литрийг тооцно). */
+  quantity?: number | null;
+  meterStart?: string | null;
+  meterEnd?: string | null;
   issuedAt: string;
   notes?: string | null;
 }
@@ -382,4 +391,81 @@ export interface FuelRefuelBreakdown {
   sources: FuelBreakdownSource[];
   /** Ээлжээр (А/Б/В/Г). */
   crews?: { crew: string; label: string; liters: number; count: number; vehicles: number }[];
+}
+
+/** Агуулах, түгээгч машины тоолуур. Заалт урд талын 0-уудтай string. */
+export interface FuelMeter {
+  id: string;
+  holderType: 'tank' | 'dispenser';
+  holderId: string;
+  holderName: string;
+  tankId: string | null;
+  vehicleId: string | null;
+  digits: number;
+  reading: string;
+  readingAt: string;
+  notes: string | null;
+}
+
+export interface FuelMeterInput {
+  holderType?: 'tank' | 'dispenser';
+  holderId?: string;
+  digits: number;
+  reading: string;
+  notes?: string | null;
+}
+
+export interface FuelFlowPart {
+  name: string;
+  quantity: number;
+  count?: number;
+}
+
+interface FuelFlowMeter {
+  meter: { id: string; digits: number; reading: string; readingAt: string } | null;
+  firstReading: string | null;
+  lastReading: string | null;
+}
+
+export interface FuelFlowTank extends FuelFlowMeter {
+  id: string;
+  name: string;
+  fuelType: FuelType;
+  received: number;
+  suppliers: (FuelFlowPart & { supplierId: string })[];
+  issued: number;
+  refueled: number;
+  given: number;
+  givenCount: number;
+  toDispensers: (FuelFlowPart & { dispenserVehicleId: string })[];
+  closing: number;
+}
+
+export interface FuelFlowDispenser extends FuelFlowMeter {
+  id: string;
+  name: string;
+  received: number;
+  fromTanks: (FuelFlowPart & { tankId: string })[];
+  given: number;
+  givenCount: number;
+  vehicles: number;
+  closing: number;
+}
+
+export interface FuelFlowSupplier {
+  supplierId: string;
+  name: string;
+  quantity: number;
+  count: number;
+  lastReceivedAt: string | null;
+  tanks: (FuelFlowPart & { tankId: string })[];
+}
+
+export interface FuelFlows {
+  from: string;
+  to: string;
+  totals: { received: number; issued: number; refueledFromTank: number; refueledFromDispenser: number };
+  tanks: FuelFlowTank[];
+  dispensers: FuelFlowDispenser[];
+  suppliers: FuelFlowSupplier[];
 }
