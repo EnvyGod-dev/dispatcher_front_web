@@ -1,5 +1,6 @@
 import {
   Bell,
+  CalendarDays,
   Building,
   CircleUserRound,
   Clock,
@@ -39,6 +40,13 @@ export const menuSections: MenuSection[] = [
         icon: Mountain,
         name: 'Уулын ажлын нэгдсэн тайлан',
         path: '/mining-report',
+        type: 'report',
+        roles: miningReportRoles,
+      },
+      {
+        icon: CalendarDays,
+        name: 'Ээлжийн хуваарь',
+        path: '/crew-schedule',
         type: 'report',
         roles: miningReportRoles,
       },
