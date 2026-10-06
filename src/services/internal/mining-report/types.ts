@@ -124,6 +124,20 @@ export interface MiningReport {
   schedule: MiningScheduleWeek[];
 }
 
+export type CrewSource = 'manual' | 'default';
+
+export interface CrewSegment {
+  start: string;
+  end: string;
+  day: Crew;
+  night: Crew;
+  resting: Crew[];
+  source: CrewSource;
+  dayLabel: string;
+  nightLabel: string;
+  restingLabels: string[];
+}
+
 export interface CrewSchedule {
   anchorDate: string;
   labels: Record<Crew, string>;
@@ -134,6 +148,29 @@ export interface CrewSchedule {
     label: string | null;
     dayCrew: Crew | null;
     nightCrew: Crew | null;
+    source?: CrewSource | null;
   };
+  days?: { date: string; day: Crew; night: Crew; source: CrewSource }[];
+  segments?: CrewSegment[];
   weeks: MiningScheduleWeek[];
+}
+
+/** Вебээс гараар оруулсан ээлжийн хуваарь. */
+export interface CrewPeriod {
+  id: string;
+  startDate: string;
+  endDate: string;
+  dayCrew: Crew;
+  nightCrew: Crew;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CrewPeriodInput {
+  startDate: string;
+  endDate: string;
+  dayCrew: Crew;
+  nightCrew: Crew;
+  notes?: string | null;
 }

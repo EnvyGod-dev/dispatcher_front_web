@@ -152,9 +152,30 @@ const handleUnauthorized = (url: string) => {
 
   isRedirectingToSignIn = true
 
-  const next = encodeURIComponent(path + window.location.search)
+  /**
+   * Нэг хүсэлт 401 өгсөн ч session бодитоор дууссан эсэхийг /api/iam-аар нэг дахин шалгана.
+   * Session хүчинтэй бол хэрэглэгчийг гаргахгүй (түр зуурын алдаанаас болж гарахгүй).
+   */
+  const subdomain = getOrganizationSubdomain()
 
-  window.location.assign(`/signin?next=${next}`)
+  fetch(`${baseURL}api/iam`, {
+    credentials: "include",
+    headers: subdomain ? { "X-Organization-Subdomain": subdomain } : undefined,
+  })
+    .then((res) => {
+      if (res.ok) {
+        isRedirectingToSignIn = false
+        return
+      }
+
+      const next = encodeURIComponent(path + window.location.search)
+
+      window.location.assign(`/signin?next=${next}`)
+    })
+    .catch(() => {
+      // Сүлжээний алдаа бол гаргахгүй — дараагийн хүсэлтээр дахин шалгана.
+      isRedirectingToSignIn = false
+    })
 }
 
 const removeLeadingSlash = (

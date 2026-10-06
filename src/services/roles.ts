@@ -156,3 +156,11 @@ export const miningReportRoles = [
   UserRole.ITA,
   UserRole.MARKSCHEIDER,
 ] as const;
+
+/** Ээлжийн хуваарь засах (backend: /crews/periods). */
+export const crewScheduleManageRoles = [
+  UserRole.SUPERADMIN,
+  UserRole.ADMIN,
+  UserRole.DISPATCHER,
+  UserRole.MANAGER,
+] as const;
