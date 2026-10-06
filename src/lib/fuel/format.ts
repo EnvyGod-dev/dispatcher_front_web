@@ -19,6 +19,9 @@ export const fmtNumber = (value: string | number | null | undefined, digits = 1)
 export const fmtLiters = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === '' ? '—' : `${fmtNumber(value)} л`;
 
+/** Түгээгчийн тоолуур 7 оронтой (одоогийн уурхайн тоолуур). */
+export const METER_DIGITS = 7;
+
 export const fmtMeter = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === '' ? '—' : String(Math.round(toNum(value)));
 

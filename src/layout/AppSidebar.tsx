@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/components/AuthProvider';
-import Image from 'next/image';
+import BrandLogo from '@/components/ui/BrandLogo';
 import Link from 'next/link';
 import React from 'react';
 import { useSidebar } from '../context/SidebarContext';
@@ -36,11 +36,11 @@ const AppSidebar: React.FC = () => {
     >
       <div className={`py-4 sm:py-8 flex justify-center items-center`}>
         <Link href="/" className="flex justify-center">
-          <Image
-            src="/images/logo/logo.svg"
-            alt="Logo"
-            width={70}
-            height={20}
+          <BrandLogo
+            logoUrl={user.organization?.logoUrl}
+            name={user.organization?.name}
+            height={isExpanded || isMobileOpen ? 40 : 28}
+            maxWidth={isExpanded || isMobileOpen ? 200 : 48}
           />
         </Link>
       </div>
