@@ -66,6 +66,7 @@ export const markscheiderReportReadRoles = [
   UserRole.MARKSCHEIDER,
   UserRole.ADMIN,
   UserRole.DISPATCHER,
+  UserRole.MANAGER,
 ];
 
 export const markscheiderReportActionRoles = [
@@ -157,10 +158,9 @@ export const miningReportRoles = [
   UserRole.MARKSCHEIDER,
 ] as const;
 
-/** Ээлжийн хуваарь засах (backend: /crews/periods). */
+/** Ээлжийн хуваарь засах (backend: /crews/periods). Удирдлага зөвхөн харна. */
 export const crewScheduleManageRoles = [
   UserRole.SUPERADMIN,
   UserRole.ADMIN,
   UserRole.DISPATCHER,
-  UserRole.MANAGER,
 ] as const;

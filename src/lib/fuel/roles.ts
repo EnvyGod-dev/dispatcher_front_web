@@ -1,14 +1,16 @@
 import { UserRole } from '@/services/roles';
 
-/** Вебэд түлшийг хянах, засах эрхтэй: admin, dispatcher, manager. fuel_operator зөвхөн харна. */
-export const fuelControlRoles: readonly UserRole[] = [
-  UserRole.SUPERADMIN,
-  UserRole.ADMIN,
-  UserRole.DISPATCHER,
-  UserRole.MANAGER,
-];
+/**
+ * Вебэд түлшийг бүртгэх, засах (орлого, зарлага, нийлүүлэгч, тохиргоо): зөвхөн admin, dispatcher.
+ * fuel_operator, ИТА зөвхөн харна; удирдлага (manager) зөвхөн тайлан харна.
+ */
+export const fuelControlRoles: readonly UserRole[] = [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.DISPATCHER];
 
-export const fuelViewRoles: readonly UserRole[] = [...fuelControlRoles, UserRole.FUEL_OPERATOR, UserRole.ITA];
+/** Бүртгэлийн жагсаалт (олголт, орлого, зарлага, аудит) харах. */
+export const fuelRecordRoles: readonly UserRole[] = [...fuelControlRoles, UserRole.FUEL_OPERATOR, UserRole.ITA];
 
-/** Орлогын засвар/цуцлах хүсэлтийг зөвхөн админ батална. */
-export const fuelApproveRoles: readonly UserRole[] = [UserRole.SUPERADMIN, UserRole.ADMIN];
+/** Тойм, зарцуулалт, тайлан харах (удирдлага орно). */
+export const fuelViewRoles: readonly UserRole[] = [...fuelRecordRoles, UserRole.MANAGER];
+
+/** Орлогын засвар/цуцлах хүсэлт батлах: admin, dispatcher. */
+export const fuelApproveRoles: readonly UserRole[] = [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.DISPATCHER];

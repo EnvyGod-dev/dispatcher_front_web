@@ -503,7 +503,7 @@ function EditRequests() {
   return (
     <Panel
       title="Орлогын засварын хүсэлт"
-      description={canApprove ? 'Хүсэлт илгээсэн хүн өөрөө батлах боломжгүй.' : 'Хүсэлтийг зөвхөн админ батална.'}
+      description={canApprove ? 'Хүсэлт илгээсэн хүн өөрөө батлах боломжгүй.' : 'Хүсэлтийг зөвхөн админ, диспетчер батална.'}
       action={
         <Segmented
           size="sm"

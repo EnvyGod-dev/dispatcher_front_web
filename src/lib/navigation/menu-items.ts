@@ -25,7 +25,7 @@ import {
   stockpileReadRoles,
 } from '@/services/roles';
 
-import { fuelControlRoles, fuelViewRoles } from '@/lib/fuel/roles';
+import { fuelControlRoles, fuelRecordRoles, fuelViewRoles } from '@/lib/fuel/roles';
 import { MenuSection } from './menu-config';
 
 export const menuSections: MenuSection[] = [
@@ -55,7 +55,7 @@ export const menuSections: MenuSection[] = [
         name: 'Уулын ажлын тайлан',
         path: '/shift-report',
         type: 'report',
-        roles: ['admin', 'dispatcher', 'ita'],
+        roles: ['admin', 'dispatcher', 'ita', 'manager'],
       },
       {
         icon: FileText,
@@ -74,6 +74,7 @@ export const menuSections: MenuSection[] = [
           'dispatcher',
           'ita',
           'mechanic',
+          'manager',
         ],
       },
       {
@@ -100,9 +101,9 @@ export const menuSections: MenuSection[] = [
         roles: fuelViewRoles,
         subItems: [
           { name: 'Тойм', path: '/fuel', roles: fuelViewRoles },
-          { name: 'Олголт', path: '/fuel/refuelings', roles: fuelViewRoles },
-          { name: 'Орлого', path: '/fuel/receipts', roles: fuelViewRoles },
-          { name: 'Зарлага', path: '/fuel/issues', roles: fuelViewRoles },
+          { name: 'Олголт', path: '/fuel/refuelings', roles: fuelRecordRoles },
+          { name: 'Орлого', path: '/fuel/receipts', roles: fuelRecordRoles },
+          { name: 'Зарлага', path: '/fuel/issues', roles: fuelRecordRoles },
           { name: 'Зарцуулалт', path: '/fuel/consumption', roles: fuelViewRoles },
           { name: 'Тайлан', path: '/fuel/reports', roles: fuelViewRoles },
           { name: 'Аудит', path: '/fuel/audit', roles: fuelControlRoles },
