@@ -3,7 +3,8 @@ import { ThemeToggleButton } from '@/components/common/ThemeToggleButton';
 import NotificationDropdown from '@/components/header/NotificationDropdown';
 import UserDropdown from '@/components/header/UserDropdown';
 import { useSidebar } from '@/context/SidebarContext';
-import Image from 'next/image';
+import { useAuth } from '@/components/AuthProvider';
+import BrandLogo from '@/components/ui/BrandLogo';
 import Link from 'next/link';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -11,6 +12,7 @@ const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { user } = useAuth();
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
@@ -84,19 +86,11 @@ const AppHeader: React.FC = () => {
           </button>
 
           <Link href="/" className="lg:hidden">
-            <Image
-              width={80}
-              height={24}
-              className="dark:hidden"
-              src="./images/logo/logo.svg"
-              alt="Logo"
-            />
-            <Image
-              width={80}
-              height={24}
-              className="hidden dark:block"
-              src="./images/logo/logo.svg"
-              alt="Logo"
+            <BrandLogo
+              logoUrl={user?.organization?.logoUrl}
+              name={user?.organization?.name}
+              height={28}
+              maxWidth={140}
             />
           </Link>
 

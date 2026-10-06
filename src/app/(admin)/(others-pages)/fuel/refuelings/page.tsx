@@ -25,6 +25,7 @@ import {
   fmtDateTime,
   fmtLiters,
   fmtMeter,
+  METER_DIGITS,
   rangePresets,
   shiftLabel,
   toNum,
@@ -484,10 +485,10 @@ function EditRefuelingDialog({
       {hasMeter ? (
         <div className="grid grid-cols-2 gap-3">
           <Field label="Эхний заалт">
-            <TextInput inputMode="numeric" value={meterStart} onChange={(e) => setMeterStart(e.target.value.replace(/\D/g, ''))} className="font-mono" />
+            <TextInput inputMode="numeric" maxLength={METER_DIGITS} value={meterStart} onChange={(e) => setMeterStart(e.target.value.replace(/\D/g, '').slice(0, METER_DIGITS))} className="font-mono" />
           </Field>
           <Field label="Төгсгөлийн заалт">
-            <TextInput inputMode="numeric" value={meterEnd} onChange={(e) => setMeterEnd(e.target.value.replace(/\D/g, ''))} className="font-mono" />
+            <TextInput inputMode="numeric" maxLength={METER_DIGITS} value={meterEnd} onChange={(e) => setMeterEnd(e.target.value.replace(/\D/g, '').slice(0, METER_DIGITS))} className="font-mono" />
           </Field>
           <p className="col-span-2 text-sm text-gray-600 dark:text-gray-400">
             Цэнэглэсэн хэмжээ:{' '}

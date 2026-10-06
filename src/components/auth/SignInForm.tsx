@@ -6,7 +6,7 @@ import auth from '@/services/public/auth';
 import userService from '@/services/internal/user';
 import { useMutation } from '@tanstack/react-query';
 import { BoxIcon, Eye, EyeClosedIcon } from 'lucide-react';
-import Image from 'next/image';
+import BrandLogo, { useTenantBranding } from '@/components/ui/BrandLogo';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -37,6 +37,7 @@ const buildUrl = (subdomain: string | null, path = '/') => {
 
 export const SignInForm = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const branding = useTenantBranding();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -152,12 +153,7 @@ export const SignInForm = () => {
     <div className="flex min-h-screen w-full flex-1 flex-col bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-8">
         <div className="mb-8 flex flex-col items-center">
-          <Image
-            src="/images/logo/logo.svg"
-            alt="Logo"
-            width={100}
-            height={100}
-          />
+          <BrandLogo logoUrl={branding.data?.logoUrl} name={branding.data?.name} height={88} maxWidth={260} />
 
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Уурхайн бүртгэл тайлангийн нэгдсэн

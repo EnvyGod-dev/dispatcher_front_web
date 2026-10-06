@@ -311,4 +311,6 @@ const http = {
     }),
 }
 
+export { getOrganizationSubdomain }
+
 export default http

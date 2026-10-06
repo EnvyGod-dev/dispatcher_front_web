@@ -1,8 +1,10 @@
 'use client';
 
 import Label from '@/components/form/Label';
+import GenericDropzoneComponent from '@/components/form/form-elements/GenericDropZone';
 import Input from '@/components/form/input/InputField';
 import Button from '@/components/ui/button/Button';
+import employeeService from '@/services/internal/employee';
 import organizationService from '@/services/internal/organization';
 import { Organization } from '@/services/internal/organization/types';
 import {
@@ -45,6 +47,7 @@ export default function CreateOrganizationSidebar({
   const [orgCode, setOrgCode] = useState('');
   const [orgContactEmail, setOrgContactEmail] = useState('');
   const [orgContactPhone, setOrgContactPhone] = useState('');
+  const [orgLogoUrl, setOrgLogoUrl] = useState('');
 
   const isEditing = Boolean(editingOrganization);
 
@@ -54,6 +57,7 @@ export default function CreateOrganizationSidebar({
     setOrgCode('');
     setOrgContactEmail('');
     setOrgContactPhone('');
+    setOrgLogoUrl('');
   };
 
   useEffect(() => {
@@ -63,6 +67,7 @@ export default function CreateOrganizationSidebar({
       setOrgCode(editingOrganization.code || '');
       setOrgContactEmail(editingOrganization.contactEmail || '');
       setOrgContactPhone(editingOrganization.contactPhone || '');
+      setOrgLogoUrl(editingOrganization.logoUrl || '');
     } else {
       resetForm();
     }
@@ -106,6 +111,7 @@ export default function CreateOrganizationSidebar({
         code: string;
         contactEmail: string;
         contactPhone?: string;
+        logoUrl?: string | null;
       };
     }) =>
       organizationService.updateOrganization({
@@ -173,19 +179,21 @@ export default function CreateOrganizationSidebar({
       contactPhone:
         orgContactPhone.trim() || undefined,
     };
+    const logoUrl = orgLogoUrl.trim();
 
     try {
       if (isEditing && editingOrganization) {
         await updateOrganization({
           id: editingOrganization.id,
-          data: orgData,
+          // Хоосон бол логог устгана (веб Stratum-ын логог харуулна).
+          data: { ...orgData, logoUrl: logoUrl || null },
         });
 
         toast.success(
           'Байгууллага амжилттай засагдлаа.'
         );
       } else {
-        await createOrganization(orgData);
+        await createOrganization({ ...orgData, logoUrl: logoUrl || undefined });
 
         toast.success(
           'Байгууллага амжилттай үүслээ.'
@@ -383,6 +391,21 @@ export default function CreateOrganizationSidebar({
                       }
                       disabled={isPending}
                     />
+                  </div>
+
+                  <div>
+                    <GenericDropzoneComponent
+                      key={`${editingOrganization?.id ?? 'new'}-${isOpen}`}
+                      title="Байгууллагын лого"
+                      onUpload={setOrgLogoUrl}
+                      initialUrl={editingOrganization?.logoUrl || ''}
+                      uploadFunction={employeeService.uploadUserImage}
+                      disabled={isPending}
+                      showPreview={true}
+                    />
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Нэвтрэх хуудас болон цэсний дээд хэсэгт харагдана. Хоосон бол Stratum-ын лого харагдана.
+                    </p>
                   </div>
                 </form>
 
