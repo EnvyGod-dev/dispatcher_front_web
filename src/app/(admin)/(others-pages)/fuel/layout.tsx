@@ -9,9 +9,9 @@ import React from 'react';
 
 const tabs = [
   { href: '/fuel', label: 'Тойм' },
-  { href: '/fuel/refuelings', label: 'Олголт' },
-  { href: '/fuel/receipts', label: 'Орлого' },
-  { href: '/fuel/issues', label: 'Зарлага' },
+  { href: '/fuel/refuelings', label: 'Олголт', records: true },
+  { href: '/fuel/receipts', label: 'Орлого', records: true },
+  { href: '/fuel/issues', label: 'Зарлага', records: true },
   { href: '/fuel/consumption', label: 'Зарцуулалт' },
   { href: '/fuel/reports', label: 'Тайлан' },
   { href: '/fuel/audit', label: 'Аудит', control: true },
@@ -20,7 +20,7 @@ const tabs = [
 
 export default function FuelLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { canView, canControl } = useFuelPermissions();
+  const { canView, canControl, canViewRecords } = useFuelPermissions();
 
   if (!canView) {
     return (
@@ -32,6 +32,9 @@ export default function FuelLayout({ children }: { children: React.ReactNode }) 
   }
 
   const isActive = (href: string) => (href === '/fuel' ? pathname === '/fuel' : pathname.startsWith(href));
+  const allowed = (t: (typeof tabs)[number]) => (!t.control || canControl) && (!t.records || canViewRecords);
+  // Удирдлага зөвхөн тойм, зарцуулалт, тайлан харна — бусад хуудсыг шууд хаягаар нээсэн ч хаана.
+  const blocked = tabs.some((t) => t.href !== '/fuel' && isActive(t.href) && !allowed(t));
 
   return (
     <div className="space-y-6">
@@ -54,7 +57,7 @@ export default function FuelLayout({ children }: { children: React.ReactNode }) 
 
       <nav className="-mx-1 flex gap-1 overflow-x-auto border-b border-gray-200 px-1 dark:border-gray-800">
         {tabs
-          .filter((t) => !t.control || canControl)
+          .filter(allowed)
           .map((t) => (
             <Link
               key={t.href}
@@ -71,7 +74,15 @@ export default function FuelLayout({ children }: { children: React.ReactNode }) 
           ))}
       </nav>
 
-      {children}
+      {blocked ? (
+        <div className="flex min-h-[30vh] flex-col items-center justify-center gap-2 text-center">
+          <Fuel className="size-8 text-gray-300" />
+          <p className="font-medium text-gray-700 dark:text-gray-300">Энэ хэсэгт хандах эрхгүй байна</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Таны эрхээр зөвхөн тайлан харах боломжтой.</p>
+        </div>
+      ) : (
+        children
+      )}
     </div>
   );
 }

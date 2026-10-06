@@ -3,6 +3,7 @@
 import FuelTrendChart from '@/components/fuel/FuelTrendChart';
 import { DateRangeFilter, EmptyState, KpiCard, LoadingRows, Panel, Pill, Segmented } from '@/components/fuel/ui';
 import { DateRange, fmtLiters, fmtTime, fuelTypeLabel, rangePresets } from '@/lib/fuel/format';
+import { useFuelPermissions } from '@/lib/fuel/permissions';
 import fuelService from '@/services/internal/fuel';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, ArrowDownToLine, ArrowUpFromLine, ClipboardList, Droplets } from 'lucide-react';
@@ -10,6 +11,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 export default function FuelOverviewPage() {
+  const { canViewRecords } = useFuelPermissions();
   const [range, setRange] = useState<DateRange>(rangePresets[3].range());
   const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day');
 
@@ -71,7 +73,13 @@ export default function FuelOverviewPage() {
         <KpiCard
           label="Хүлээгдэж буй хүсэлт"
           value={s?.pending_edit_requests ?? 0}
-          hint={<Link href="/fuel/receipts?tab=requests" className="hover:text-brand-600">Орлогын засвар →</Link>}
+          hint={
+            canViewRecords ? (
+              <Link href="/fuel/receipts?tab=requests" className="hover:text-brand-600">Орлогын засвар →</Link>
+            ) : (
+              'Орлогын засвар'
+            )
+          }
           icon={<ClipboardList className="size-4" />}
           tone={s?.pending_edit_requests ? 'amber' : 'gray'}
           loading={dashboard.isLoading}
@@ -173,9 +181,11 @@ export default function FuelOverviewPage() {
         <Panel
           title="Сүүлийн олголт"
           action={
-            <Link href="/fuel/refuelings" className="text-sm font-medium text-brand-600 hover:text-brand-700">
-              Бүгдийг харах →
-            </Link>
+            canViewRecords ? (
+              <Link href="/fuel/refuelings" className="text-sm font-medium text-brand-600 hover:text-brand-700">
+                Бүгдийг харах →
+              </Link>
+            ) : undefined
           }
         >
           {recent.isLoading ? (
