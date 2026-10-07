@@ -570,7 +570,9 @@ export class ShiftReportExportService {
   static exportShifts(
     shifts: ShiftReport[],
     visibleColumns: string[],
-    format: ExportFormat
+    format: ExportFormat,
+    /** Дээд талын картуудын мэдээлэл: [хэсэг, үзүүлэлт, утга, тайлбар] — Excel-д "Тойм" хуудас болно. */
+    summary?: [string, string, string | number, string][],
   ): void {
     const columns = visibleColumns
       .map((col) => {
@@ -600,7 +602,30 @@ export class ShiftReportExportService {
       return row;
     });
 
+    if (format === 'xlsx' && summary?.length) {
+      this.downloadXLSXWithSummary(exportData, summary, `shift-report-${this.getDateString()}`);
+      return;
+    }
+
     this.downloadFile(exportData, `shift-report-${this.getDateString()}`, format);
+  }
+
+  private static downloadXLSXWithSummary(
+    data: Record<string, unknown>[],
+    summary: [string, string, string | number, string][],
+    filename: string,
+  ): void {
+    const workbook = XLSX.utils.book_new();
+
+    const summarySheet = XLSX.utils.aoa_to_sheet([['Хэсэг', 'Үзүүлэлт', 'Утга', 'Тайлбар'], ...summary]);
+    summarySheet['!cols'] = [{ wch: 22 }, { wch: 36 }, { wch: 26 }, { wch: 60 }];
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Тойм');
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    worksheet['!cols'] = Object.keys(data[0] ?? {}).map(() => ({ wch: 15 }));
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Тайлан');
+
+    XLSX.writeFile(workbook, `${filename}.xlsx`);
   }
 
   static async exportWorkLogs(

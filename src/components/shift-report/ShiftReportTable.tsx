@@ -47,6 +47,7 @@ import PageBreadcrumb from '../common/PageBreadCrumb';
 import ShiftReportFilter from './ShiftReportFilter';
 import ShiftInspectionReportTab from './ShiftInspectionReportTab';
 import ShiftReportKpiCard from './ShiftReportKpiCard';
+import { buildShiftSummary } from './exportSummary';
 
 const getUbDateOnlyString = () => {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -224,7 +225,9 @@ export default function ShiftReportTable() {
     const allShifts = allDataResponse.data || [];
 
     if (type === 'shifts') {
-      ShiftReportExportService.exportShifts(allShifts, visibleColumns, format);
+      // Дээд талын картуудын мэдээллийг "Тойм" хуудсанд оруулна.
+      const summary = format === 'xlsx' ? await buildShiftSummary(filters) : undefined;
+      ShiftReportExportService.exportShifts(allShifts, visibleColumns, format, summary);
       toast.success(`${allShifts.length} ээлжийн тайлан амжилттай татагдлаа`);
       return;
     }
