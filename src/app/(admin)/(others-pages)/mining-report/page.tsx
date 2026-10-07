@@ -159,7 +159,7 @@ function ReportBody({ data }: { data: MiningReport }) {
         </Panel>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
             <KpiCard
               label="Нийт бүтээл"
               value={m3(t.totalM3)}
