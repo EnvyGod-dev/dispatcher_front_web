@@ -42,6 +42,8 @@ export interface MiningCrewRow extends MiningMetrics {
   label: string;
   dayShifts: number;
   nightShifts: number;
+  /** Тухайн ээлжийн шилдэг оператор (хуучин backend-д байхгүй). */
+  topOperator?: { driverId: string; name: string; m3: number; trips: number } | null;
 }
 
 export interface MiningShiftSlot extends MiningMetrics {
