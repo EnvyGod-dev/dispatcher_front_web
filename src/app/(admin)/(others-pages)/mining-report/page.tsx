@@ -141,6 +141,7 @@ export default function MiningReportPage() {
 
 function ReportBody({ data }: { data: MiningReport }) {
   const t = data.totals;
+  const h = data.highlights;
   const hasWork = t.shifts > 0 || t.fleetFuelLiters > 0 || data.excavators.length > 0;
 
   return (
@@ -174,19 +175,31 @@ function ReportBody({ data }: { data: MiningReport }) {
               tone="amber"
               hint={`${ratio(t.litersPerM3)} л/м³ · ${ratio(t.litersPerTrip, 1)} л/рейс`}
             />
-            <KpiCard label="Мото цаг (машин)" value={fmtNumber(t.motoHours)} hint={`${ratio(t.m3PerMotoHour, 1)} м³/цаг · ${fmtNumber(t.km)} км`} />
+            {/* Онцлох: шөнийн ээлжийн шилдэг оператор, машин, экскаватор; хамгийн их түлш авсан техник */}
             <KpiCard
-              label="Экскаватор"
-              value={t.excavators}
-              hint={t.excavatorAvailability === null ? 'Цагийн бүртгэлгүй' : `Бэлэн ${pct(t.excavatorAvailability)} · Ашиглалт ${pct(t.excavatorUtilization)}`}
+              label="Шөнийн шилдэг оператор"
+              value={h?.nightOperator?.name ?? '—'}
+              tone="blue"
+              hint={h?.nightOperator ? `${m3(h.nightOperator.m3)} · ${h.nightOperator.trips} рейс` : 'Шөнийн ээлжийн бүртгэл алга'}
             />
             <KpiCard
-              label="Маркшейдер"
-              value={m3(t.markM3)}
-              tone={t.markDiff !== null && t.markDiff < 0 ? 'red' : 'green'}
-              hint={t.markM3 === null ? 'Хэмжилт оруулаагүй' : `Зөрүү ${m3(t.markDiff)}`}
+              label="Шөнийн шилдэг машин"
+              value={h?.nightTruck ? h.nightTruck.code || h.nightTruck.name : '—'}
+              tone="blue"
+              hint={h?.nightTruck ? `${m3(h.nightTruck.m3)} · ${h.nightTruck.trips} рейс` : 'Шөнийн ээлжийн бүртгэл алга'}
             />
-            <KpiCard label="Оператор" value={t.operators} hint={`${t.shifts} ээлж`} />
+            <KpiCard
+              label="Шөнийн шилдэг экскаватор"
+              value={h?.nightExcavator ? h.nightExcavator.code || h.nightExcavator.name : '—'}
+              tone="blue"
+              hint={h?.nightExcavator ? `${m3(h.nightExcavator.m3)} · ${h.nightExcavator.trips} рейс` : 'Шөнийн ээлжийн бүртгэл алга'}
+            />
+            <KpiCard
+              label="Хамгийн их түлш авсан"
+              value={h?.topFuelVehicle ? h.topFuelVehicle.code || h.topFuelVehicle.name : '—'}
+              tone="amber"
+              hint={h?.topFuelVehicle ? `${liters(h.topFuelVehicle.liters)} · ${h.topFuelVehicle.count} удаа` : 'Түлш олголт алга'}
+            />
           </div>
 
           <CrewCards crews={data.crews} />

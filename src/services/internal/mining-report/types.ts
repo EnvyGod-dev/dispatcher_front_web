@@ -108,11 +108,29 @@ export interface MiningScheduleWeek {
   restingLabels: string[];
 }
 
+export interface MiningHighlight {
+  id: string;
+  name: string;
+  code: string | null;
+  m3: number;
+  trips: number;
+}
+
+/** Онцлох: шөнийн ээлжийн шилдэг оператор, машин, экскаватор; хамгийн их түлш авсан техник. */
+export interface MiningHighlights {
+  nightOperator: MiningHighlight | null;
+  nightTruck: MiningHighlight | null;
+  nightExcavator: MiningHighlight | null;
+  topFuelVehicle: { id: string; name: string; code: string | null; liters: number; count: number } | null;
+}
+
 export interface MiningReport {
   from: string;
   to: string;
   generatedAt: string;
   warnings: string[];
+  /** Хуучин backend-д байхгүй. */
+  highlights?: MiningHighlights;
   totals: MiningTotals;
   crews: MiningCrewRow[];
   days: MiningDayRow[];
