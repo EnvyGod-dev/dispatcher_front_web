@@ -161,6 +161,14 @@ export interface ShiftStatistics {
   totalMileage: number;
 }
 
+export type ShiftTopVehicle = {
+  vehicleId: string | null;
+  vehicleCode: string | null;
+  vehicleName: string | null;
+  production: string;
+  trips: number;
+};
+
 export type ShiftInsight = {
   totalShifts: string;
   completedShifts: string;
@@ -178,6 +186,9 @@ export type ShiftInsight = {
   totalSoilProduction: string;
   topDriverShiftGroup: DriverShiftGroup | null;
   topDriverShiftGroupProduction: string;
+  /** Шилдэг ээлжийн хамгийн өндөр бүтээлтэй самосвал, экскаватор (хуучин backend-д байхгүй). */
+  topShiftDump?: ShiftTopVehicle | null;
+  topShiftExcavator?: ShiftTopVehicle | null;
   activeVehicles: string;
   totalActiveVehicles: string;
 };

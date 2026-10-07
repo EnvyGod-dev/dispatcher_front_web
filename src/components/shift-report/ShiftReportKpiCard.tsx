@@ -1,11 +1,11 @@
 import {
   Activity,
-  CalendarClock,
-  CircleCheckBig,
+  Construction,
   Pickaxe,
   Route,
   Sparkles,
   Trophy,
+  Truck,
 } from 'lucide-react';
 import shiftReportService from '@/services/internal/shift-report';
 import type { ShiftReportFilters } from '@/services/internal/shift-report/types';
@@ -45,9 +45,15 @@ export default function ShiftReportKpiCard({
     topDriverShiftGroupProduction: '0',
   };
 
-  const totalShifts = formatNumber(insights.totalShifts);
-  const completedShifts = formatNumber(insights.completedShifts);
-  const activeShifts = formatNumber(insights.activeShifts);
+  // Ээлж (А/Б/В/Г) — серверт латин үсгээр хадгалагдана.
+  const crewLabels: Record<string, string> = { A: 'А', B: 'Б', C: 'В', D: 'Г' };
+  const topCrew = insights.topDriverShiftGroup
+    ? `${crewLabels[insights.topDriverShiftGroup] ?? insights.topDriverShiftGroup} ээлж`
+    : null;
+  const topDump = insightsData?.body?.topShiftDump ?? null;
+  const topExcavator = insightsData?.body?.topShiftExcavator ?? null;
+  const vehicleTitle = (v: { vehicleCode: string | null; vehicleName: string | null } | null) =>
+    v ? v.vehicleCode || v.vehicleName || '-' : '-';
   const totalTrips = formatNumber(insights.totalTrips);
   const totalProduction = formatNumber(insights.totalProduction);
   const topShiftProduction = formatNumber(
@@ -76,24 +82,31 @@ export default function ShiftReportKpiCard({
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-          {/* Нийт ээлж */}
+          {/* Шилдэг ээлжийн экскаватор */}
           <StatCard
-            title="Нийт ээлж"
-            value={totalShifts}
-            subtitle="Бүртгэгдсэн ээлж"
-            additionalInfo={`Идэвхтэй: ${activeShifts}`}
-            icon={<CalendarClock className="h-5 w-5" />}
+            title="Шилдэг ээлжийн экскаватор"
+            value={vehicleTitle(topExcavator)}
+            subtitle={topCrew ? `${topCrew} · хамгийн өндөр бүтээл` : 'Ээлжийн мэдээлэл алга'}
+            additionalInfo={
+              topExcavator
+                ? `${formatNumber(topExcavator.production)} м³ · ${formatNumber(topExcavator.trips)} рейс`
+                : undefined
+            }
+            icon={<Construction className="h-5 w-5" />}
             bgColor="bg-blue-50 dark:bg-blue-950/30"
             iconColor="text-blue-600 dark:text-blue-400"
             isLoading={isLoading}
           />
 
-          {/* Дууссан ээлж */}
+          {/* Шилдэг ээлжийн самосвал */}
           <StatCard
-            title="Дууссан ээлж"
-            value={completedShifts}
-            subtitle="Амжилттай хаагдсан"
-            icon={<CircleCheckBig className="h-5 w-5" />}
+            title="Шилдэг ээлжийн самосвал"
+            value={vehicleTitle(topDump)}
+            subtitle={topCrew ? `${topCrew} · хамгийн өндөр бүтээл` : 'Ээлжийн мэдээлэл алга'}
+            additionalInfo={
+              topDump ? `${formatNumber(topDump.production)} м³ · ${formatNumber(topDump.trips)} рейс` : undefined
+            }
+            icon={<Truck className="h-5 w-5" />}
             bgColor="bg-emerald-50 dark:bg-emerald-950/30"
             iconColor="text-emerald-600 dark:text-emerald-400"
             isLoading={isLoading}
@@ -124,7 +137,7 @@ export default function ShiftReportKpiCard({
           {/* Шилдэг ээлж */}
           <StatCard
             title="Шилдэг ээлж"
-            value={insights.topDriverShiftGroup || '-'}
+            value={topCrew ?? '-'}
             subtitle="ABCD ээлжийн гүйцэтгэл"
             additionalInfo={`Бүтээмж: ${topShiftProduction} м³`}
             icon={<Trophy className="h-5 w-5" />}
