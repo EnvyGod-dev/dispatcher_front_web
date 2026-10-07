@@ -7,6 +7,7 @@ import { DateRange, errorMessage, fmtNumber, rangePresets } from '@/lib/fuel/for
 import { cn } from '@/lib/utils';
 import miningReportService from '@/services/internal/mining-report';
 import type {
+  MiningCrewLeader,
   MiningCrewRow,
   MiningHighlights,
   MiningDayRow,
@@ -182,7 +183,7 @@ function ReportBody({ data }: { data: MiningReport }) {
 
           <CrewCards crews={data.crews} />
 
-          <CrewTopOperators crews={data.crews} />
+          <CrewTopOperators crews={data.crews} from={data.from} to={data.to} />
 
           <Panel title="Өдөр тутмын бүтээл" description="Өдрийн ба шөнийн ээлжээр, ээлжийн бригадтай">
             <DailyChart days={data.days} />
@@ -295,26 +296,103 @@ function Highlights({ highlights: h }: { highlights?: MiningHighlights }) {
   );
 }
 
-/** Ээлж (А/Б/В/Г) бүрийн шилдэг оператор ба ээлжийн нийт рейс. */
-function CrewTopOperators({ crews }: { crews: MiningCrewRow[] }) {
+const MEDALS = [
+  { label: '1', ring: 'bg-gradient-to-br from-amber-300 to-amber-500 text-white shadow-sm shadow-amber-500/30' },
+  { label: '2', ring: 'bg-gradient-to-br from-slate-200 to-slate-400 text-white' },
+  { label: '3', ring: 'bg-gradient-to-br from-orange-300 to-orange-600 text-white' },
+];
+
+/**
+ * Сарын урамшуулал: ээлж (А/Б/В/Г) бүрийн хамгийн олон рейс хийсэн оператор (тавцан 1–3),
+ * ээлжийн нийт рейс, 2-р байраас хэдэн рейсээр түрүүлсэн.
+ */
+function CrewTopOperators({ crews, from, to }: { crews: MiningCrewRow[]; from: string; to: string }) {
   return (
-    <Panel title="Ээлж бүрийн шилдэг оператор" description="Хамгийн өндөр бүтээлтэй оператор ба ээлжийн нийт рейс">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {crews.map((c) => (
-          <div key={c.crew} className="flex items-center gap-3 rounded-xl border border-gray-100 px-3 py-3 dark:border-gray-800">
-            <CrewBadge label={c.label} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{c.topOperator?.name ?? '—'}</p>
-              <p className="truncate text-xs tabular-nums text-gray-500">
-                {c.topOperator ? `${m3(c.topOperator.m3)} · ${c.topOperator.trips} рейс` : 'Бүртгэл алга'}
-              </p>
+    <Panel
+      title={
+        <span className="flex items-center gap-2">
+          <Trophy className="size-5 text-amber-500" /> Урамшуулал · ээлж бүрийн шилдэг оператор
+        </span>
+      }
+      description={`Хамгийн олон рейс хийсэн оператор · ${dayjs(from).format('YYYY.MM.DD')} – ${dayjs(to).format('YYYY.MM.DD')}`}
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
+        {crews.map((c) => {
+          const leaders = c.topOperators ?? (c.topOperator ? [{ ...c.topOperator, rank: 1, shifts: 0, tripsPerShift: null, sharePercent: null }] : []);
+          const [winner, ...rest] = leaders;
+          const lead = winner && rest[0] ? winner.trips - rest[0].trips : null;
+
+          return (
+            <div key={c.crew} className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <CrewBadge label={c.label} />
+                <p className="flex-1 font-semibold text-gray-900 dark:text-white">{c.label} ээлж</p>
+                <div className="text-right">
+                  <p className="text-[11px] text-gray-500">Ээлжийн нийт</p>
+                  <p className="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{fmtNumber(c.trips)} рейс</p>
+                </div>
+              </div>
+
+              {winner ? (
+                <div className="relative mx-3 overflow-hidden rounded-xl bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 p-4 dark:from-amber-500/15 dark:via-orange-500/10 dark:to-amber-500/5">
+                  <Trophy className="pointer-events-none absolute -right-3 -top-3 size-24 text-amber-400/20" />
+                  <div className="flex items-center gap-3">
+                    <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-full text-lg font-bold', MEDALS[0].ring)}>
+                      <Trophy className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">1-р байр</p>
+                      <p className="break-words text-base font-bold leading-tight text-gray-900 dark:text-white">{winner.name}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-end justify-between gap-2">
+                    <p className="text-3xl font-bold tabular-nums text-gray-900 dark:text-white">
+                      {fmtNumber(winner.trips)}
+                      <span className="ml-1 text-sm font-medium text-gray-500">рейс</span>
+                    </p>
+                    {lead !== null && lead > 0 && (
+                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-white/10 dark:text-amber-300">
+                        2-р байраас +{fmtNumber(lead)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs tabular-nums text-gray-600 dark:text-gray-400">
+                    {[
+                      m3(winner.m3),
+                      winner.shifts ? `${winner.shifts} ээлж` : null,
+                      winner.tripsPerShift !== null ? `${ratio(winner.tripsPerShift, 1)} рейс/ээлж` : null,
+                      winner.sharePercent !== null ? `ээлжийн ${pct(winner.sharePercent)}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+              ) : (
+                <div className="mx-3 rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500 dark:bg-white/[0.03]">
+                  Энэ хугацаанд рейс бүртгэгдээгүй
+                </div>
+              )}
+
+              <div className="flex-1 space-y-1 px-3 py-3">
+                {rest.map((o) => (
+                  <div key={o.driverId} className="flex items-center gap-3 rounded-lg px-1 py-1.5">
+                    <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold', MEDALS[o.rank - 1]?.ring)}>
+                      {o.rank}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-800 dark:text-white/90">{o.name}</p>
+                      <p className="truncate text-[11px] tabular-nums text-gray-500">
+                        {m3(o.m3)}
+                        {o.shifts ? ` · ${o.shifts} ээлж` : ''}
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{fmtNumber(o.trips)} рейс</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-[11px] text-gray-500">Нийт рейс</p>
-              <p className="text-base font-semibold tabular-nums text-gray-900 dark:text-white">{fmtNumber(c.trips)}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Panel>
   );
@@ -580,6 +658,8 @@ function exportReport(data: MiningReport) {
     ['Маркшейдерийн зөрүү (м³)', t.markDiff],
   ];
 
+  type Leader = MiningCrewLeader & { crew: string; crewTrips: number };
+
   const metricCols = <T extends MiningCrewRow | MiningTruckRow | MiningOperatorRow>() => [
     { header: 'Ээлж', value: (r: T) => r.shifts, width: 8 },
     { header: 'Рейс', value: (r: T) => r.trips, width: 8 },
@@ -613,6 +693,21 @@ function exportReport(data: MiningReport) {
           ...metricCols<MiningCrewRow>(),
           { header: 'Төлөвлөгөө м³', value: (r: MiningCrewRow) => r.planM3, width: 13 },
           { header: 'Биелэлт %', value: (r: MiningCrewRow) => r.planPercent, width: 10 },
+        ],
+      },
+      {
+        name: 'Урамшуулал',
+        rows: data.crews.flatMap((c) => (c.topOperators ?? []).map((o) => ({ crew: c.label, crewTrips: c.trips, ...o }))),
+        columns: [
+          { header: 'Ээлж', value: (r: Leader) => r.crew, width: 8 },
+          { header: 'Байр', value: (r: Leader) => r.rank, width: 7 },
+          { header: 'Оператор', value: (r: Leader) => r.name, width: 24 },
+          { header: 'Рейс', value: (r: Leader) => r.trips, width: 8 },
+          { header: 'м³', value: (r: Leader) => r.m3, width: 10 },
+          { header: 'Ээлж (тоо)', value: (r: Leader) => r.shifts, width: 10 },
+          { header: 'Рейс/ээлж', value: (r: Leader) => r.tripsPerShift, width: 10 },
+          { header: 'Ээлжийн нийт рейс', value: (r: Leader) => r.crewTrips, width: 16 },
+          { header: 'Эзлэх %', value: (r: Leader) => r.sharePercent, width: 9 },
         ],
       },
       {
