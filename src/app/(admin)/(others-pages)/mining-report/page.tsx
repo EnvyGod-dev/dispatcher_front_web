@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import miningReportService from '@/services/internal/mining-report';
 import type {
   MiningCrewRow,
+  MiningHighlights,
   MiningDayRow,
   MiningExcavatorRow,
   MiningOperatorRow,
@@ -19,7 +20,7 @@ import { stockpileTypeMap } from '@/services/internal/stockpile/types';
 import { useQuery } from '@tanstack/react-query';
 import { ApexOptions } from 'apexcharts';
 import dayjs from 'dayjs';
-import { AlertTriangle, Mountain, Trophy } from 'lucide-react';
+import { AlertTriangle, Construction, Fuel, Mountain, Trophy, Truck, UserRound } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
@@ -158,7 +159,7 @@ function ReportBody({ data }: { data: MiningReport }) {
         </Panel>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
             <KpiCard
               label="Нийт бүтээл"
               value={m3(t.totalM3)}
@@ -175,34 +176,13 @@ function ReportBody({ data }: { data: MiningReport }) {
               tone="amber"
               hint={`${ratio(t.litersPerM3)} л/м³ · ${ratio(t.litersPerTrip, 1)} л/рейс`}
             />
-            {/* Онцлох: шөнийн ээлжийн шилдэг оператор, машин, экскаватор; хамгийн их түлш авсан техник */}
-            <KpiCard
-              label="Шөнийн шилдэг оператор"
-              value={h?.nightOperator?.name ?? '—'}
-              tone="blue"
-              hint={h?.nightOperator ? `${m3(h.nightOperator.m3)} · ${h.nightOperator.trips} рейс` : 'Шөнийн ээлжийн бүртгэл алга'}
-            />
-            <KpiCard
-              label="Шөнийн шилдэг машин"
-              value={h?.nightTruck ? h.nightTruck.code || h.nightTruck.name : '—'}
-              tone="blue"
-              hint={h?.nightTruck ? `${m3(h.nightTruck.m3)} · ${h.nightTruck.trips} рейс` : 'Шөнийн ээлжийн бүртгэл алга'}
-            />
-            <KpiCard
-              label="Шөнийн шилдэг экскаватор"
-              value={h?.nightExcavator ? h.nightExcavator.code || h.nightExcavator.name : '—'}
-              tone="blue"
-              hint={h?.nightExcavator ? `${m3(h.nightExcavator.m3)} · ${h.nightExcavator.trips} рейс` : 'Шөнийн ээлжийн бүртгэл алга'}
-            />
-            <KpiCard
-              label="Хамгийн их түлш авсан"
-              value={h?.topFuelVehicle ? h.topFuelVehicle.code || h.topFuelVehicle.name : '—'}
-              tone="amber"
-              hint={h?.topFuelVehicle ? `${liters(h.topFuelVehicle.liters)} · ${h.topFuelVehicle.count} удаа` : 'Түлш олголт алга'}
-            />
           </div>
 
+          <Highlights highlights={h} />
+
           <CrewCards crews={data.crews} />
+
+          <CrewTopOperators crews={data.crews} />
 
           <Panel title="Өдөр тутмын бүтээл" description="Өдрийн ба шөнийн ээлжээр, ээлжийн бригадтай">
             <DailyChart days={data.days} />
@@ -254,6 +234,89 @@ function ReportBody({ data }: { data: MiningReport }) {
         </Panel>
       )}
     </div>
+  );
+}
+
+/** Онцлох техник, оператор: жижиг, мөр шилждэг (wrap) хайрцгууд. */
+function Highlights({ highlights: h }: { highlights?: MiningHighlights }) {
+  const items = [
+    {
+      label: 'Шөнийн шилдэг оператор',
+      value: h?.nightOperator?.name,
+      hint: h?.nightOperator ? `${m3(h.nightOperator.m3)} · ${h.nightOperator.trips} рейс` : null,
+      icon: <UserRound className="size-4" />,
+    },
+    {
+      label: 'Шөнийн шилдэг машин',
+      value: h?.nightTruck ? h.nightTruck.code || h.nightTruck.name : null,
+      hint: h?.nightTruck ? `${m3(h.nightTruck.m3)} · ${h.nightTruck.trips} рейс` : null,
+      icon: <Truck className="size-4" />,
+    },
+    {
+      label: 'Шөнийн шилдэг экскаватор',
+      value: h?.nightExcavator ? h.nightExcavator.code || h.nightExcavator.name : null,
+      hint: h?.nightExcavator ? `${m3(h.nightExcavator.m3)} · ${h.nightExcavator.trips} рейс` : null,
+      icon: <Construction className="size-4" />,
+    },
+    {
+      label: 'Хамгийн их түлш авсан',
+      value: h?.topFuelVehicle ? h.topFuelVehicle.code || h.topFuelVehicle.name : null,
+      hint: h?.topFuelVehicle ? `${liters(h.topFuelVehicle.liters)} · ${h.topFuelVehicle.count} удаа` : null,
+      icon: <Fuel className="size-4" />,
+      fuel: true,
+    },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="flex min-w-[180px] flex-1 basis-[200px] items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-gray-800 dark:bg-white/[0.03]"
+        >
+          <span
+            className={cn(
+              'flex size-8 shrink-0 items-center justify-center rounded-lg',
+              item.fuel
+                ? 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-400'
+                : 'bg-blue-light-50 text-blue-light-600 dark:bg-blue-light-500/15 dark:text-blue-light-400',
+            )}
+          >
+            {item.icon}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[11px] text-gray-500">{item.label}</p>
+            <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{item.value ?? '—'}</p>
+            {item.hint && <p className="truncate text-[11px] tabular-nums text-gray-500">{item.hint}</p>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Ээлж (А/Б/В/Г) бүрийн шилдэг оператор ба ээлжийн нийт рейс. */
+function CrewTopOperators({ crews }: { crews: MiningCrewRow[] }) {
+  return (
+    <Panel title="Ээлж бүрийн шилдэг оператор" description="Хамгийн өндөр бүтээлтэй оператор ба ээлжийн нийт рейс">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {crews.map((c) => (
+          <div key={c.crew} className="flex items-center gap-3 rounded-xl border border-gray-100 px-3 py-3 dark:border-gray-800">
+            <CrewBadge label={c.label} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{c.topOperator?.name ?? '—'}</p>
+              <p className="truncate text-xs tabular-nums text-gray-500">
+                {c.topOperator ? `${m3(c.topOperator.m3)} · ${c.topOperator.trips} рейс` : 'Бүртгэл алга'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[11px] text-gray-500">Нийт рейс</p>
+              <p className="text-base font-semibold tabular-nums text-gray-900 dark:text-white">{fmtNumber(c.trips)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Panel>
   );
 }
 
