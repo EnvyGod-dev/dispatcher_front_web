@@ -72,6 +72,10 @@ export default function StatCard({
     }
   };
 
+  // Урт утга (техникийн нэр гэх мэт) тасрахгүй: үсгийг жижигрүүлж, мөр шилжүүлнэ.
+  const valueLength = String(value ?? '').length;
+  const valueSize = valueLength <= 8 ? 'text-3xl' : valueLength <= 14 ? 'text-2xl' : 'text-lg leading-snug';
+
   if (isLoading) {
     return (
       <div className="bg-background rounded-lg border border-border p-6 text-card-foreground shadow-sm animate-pulse">
@@ -90,7 +94,7 @@ export default function StatCard({
   return (
     <div
       className={`
-        bg-background text-card-foreground rounded-lg border border-border p-6 shadow-sm
+        bg-background text-card-foreground rounded-lg border border-border p-5 shadow-sm
         transition-all duration-200 hover:shadow-md
         ${onClick ? 'cursor-pointer hover:border-brand-300 dark:hover:border-brand-800' : ''}
       `}
@@ -98,7 +102,7 @@ export default function StatCard({
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3">
         {/* Content Section */}
         <div className="flex-1 min-w-0">
           {/* Title */}
@@ -108,7 +112,7 @@ export default function StatCard({
 
           {/* Value with Trend */}
           <div className="flex items-baseline gap-2 mb-2">
-            <h3 className="text-3xl font-bold text-foreground truncate">
+            <h3 className={`${valueSize} min-w-0 font-bold text-foreground break-words [overflow-wrap:anywhere]`}>
               {value}
             </h3>
 
@@ -167,7 +171,7 @@ export default function StatCard({
         {/* Icon Section - Fixed size container */}
         <div
           className={`
-          flex-shrink-0 w-14 h-14 rounded-lg flex items-center justify-center
+          flex-shrink-0 w-11 h-11 rounded-lg flex items-center justify-center
           ${bgColor}
         `}
         >
