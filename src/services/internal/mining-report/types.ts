@@ -37,6 +37,17 @@ export interface MiningTotals extends MiningMetrics {
   excavatorUtilization: number | null;
 }
 
+export interface MiningCrewLeader {
+  rank: number;
+  driverId: string;
+  name: string;
+  trips: number;
+  m3: number;
+  shifts: number;
+  tripsPerShift: number | null;
+  sharePercent: number | null;
+}
+
 export interface MiningCrewRow extends MiningMetrics {
   crew: Crew;
   label: string;
@@ -44,6 +55,8 @@ export interface MiningCrewRow extends MiningMetrics {
   nightShifts: number;
   /** Тухайн ээлжийн шилдэг оператор (хуучин backend-д байхгүй). */
   topOperator?: { driverId: string; name: string; m3: number; trips: number } | null;
+  /** Урамшуулал: хамгийн олон рейс хийсэн эхний 3 оператор (хуучин backend-д байхгүй). */
+  topOperators?: MiningCrewLeader[];
 }
 
 export interface MiningShiftSlot extends MiningMetrics {
