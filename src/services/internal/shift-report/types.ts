@@ -93,12 +93,23 @@ export interface ShiftReportFilters {
   sortOrder?: "asc" | "desc";
 }
 
+/** Аюултай / анхаарах гэж тэмдэглэсэн үзлэг: бүлэг, үзүүлэлт, төлөв, тэмдэглэл. */
+export type IssueInspection = {
+  group: string | null;
+  name: string | null;
+  status: "issue" | "needs_inspection";
+  notes: string | null;
+  photoUrl: string | null;
+};
+
 export type ShiftReport = Shift & {
   workLogsCount?: string;
   coalWorkLogCount?: string;
   soilWorkLogCount?: string;
   hasInspectionIssues?: boolean;
   issueInspectionNames?: string;
+  /** Хуучин backend-д байхгүй. */
+  issueInspections?: IssueInspection[];
   driver: Pick<Employee, "id" | "firstName" | "lastName" | "position"> | null;
   vehicle: Pick<Vehicle, "id" | "code" | "name" | "type"> | null;
 };
@@ -141,6 +152,8 @@ export interface ShiftInspectionReportRow {
   needsInspectionCount: number;
   issueInspectionNames: string;
   issueInspectionTypes: string;
+  /** Хуучин backend-д байхгүй. */
+  issueInspections?: IssueInspection[];
 }
 
 export interface ShiftInspectionReportResponse {
