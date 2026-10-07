@@ -1,5 +1,6 @@
 import { formatDateFull } from '@/lib/time-formatter';
 import {
+  IssueInspection,
   ShiftInspectionReportRow,
   ShiftReport,
   ShiftReportFilters,
@@ -224,7 +225,8 @@ const shiftColumnMappings: Record<string, ColumnMapping> = {
   comment: {
     key: 'comment',
     label: 'Тэмдэглэл',
-    getValue: (shift) => (shift as any).comment || '-',
+    // Аль үзүүлэлт аюултай/анхаарах, яагаад (үзлэгийн тэмдэглэл).
+    getValue: (shift) => formatIssueInspections(shift.issueInspections, shift.issueInspectionNames),
   },
 };
 
@@ -232,10 +234,51 @@ const shiftColumnMappings: Record<string, ColumnMapping> = {
 // Inspection helpers
 // ---------------------------------------------------------------------------
 
-const COMMENT_COL = 'Тайлбар' as const;
+const COMMENT_COL = 'Тэмдэглэл' as const;
+
+const ISSUE_STATUS_LABEL: Record<IssueInspection['status'], string> = {
+  issue: 'Аюултай',
+  needs_inspection: 'Анхаарах',
+};
+
+/** "Авцуулах холбоо (Хүч дамжуулах) — Аюултай: hatuu; Гидрийн тосны түвшин — Анхаарах" */
+function formatIssueInspections(list: IssueInspection[] | undefined, fallback?: string): string {
+  if (!list?.length) return fallback?.trim() || '-';
+  return list
+    .map((i) => {
+      const name = `${i.name ?? '-'}${i.group ? ` (${i.group})` : ''}`;
+      return `${name} — ${ISSUE_STATUS_LABEL[i.status] ?? i.status}${i.notes ? `: ${i.notes}` : ''}`;
+    })
+    .join('; ');
+}
 
 function getRowComment(row: ShiftInspectionReportRow): string {
-  return row.issueInspectionNames?.trim() || '-';
+  return formatIssueInspections(row.issueInspections, row.issueInspectionNames);
+}
+
+const ISSUE_SHEET_HEADER = ['Огноо', 'Ээлж', 'Оператор', 'Техник', 'Бүлэг', 'Үзүүлэлт', 'Төлөв', 'Тэмдэглэл', 'Зураг'];
+
+/** Аюултай / анхаарах үзлэг бүрийг нэг мөрөөр: аль үзүүлэлт, яагаад (тэмдэглэл). */
+function buildIssueSheet(
+  items: { date: string | null; shiftType: string | null; operator: string; vehicle: string; issues?: IssueInspection[] }[],
+): XLSX.WorkSheet | null {
+  const rows = items.flatMap((item) =>
+    (item.issues ?? []).map((i) => [
+      item.date ?? '-',
+      item.shiftType === 'day' ? 'Өдөр' : item.shiftType === 'night' ? 'Шөнө' : '-',
+      item.operator,
+      item.vehicle,
+      i.group ?? '-',
+      i.name ?? '-',
+      ISSUE_STATUS_LABEL[i.status] ?? i.status,
+      i.notes ?? '-',
+      i.photoUrl ?? '',
+    ]),
+  );
+  if (!rows.length) return null;
+  const sheet = XLSX.utils.aoa_to_sheet([ISSUE_SHEET_HEADER, ...rows]);
+  sheet['!cols'] = [{ wch: 12 }, { wch: 7 }, { wch: 24 }, { wch: 18 }, { wch: 20 }, { wch: 32 }, { wch: 10 }, { wch: 40 }, { wch: 30 }];
+  return sheet;
 }
 
 // ---------------------------------------------------------------------------
@@ -602,8 +645,17 @@ export class ShiftReportExportService {
       return row;
     });
 
-    if (format === 'xlsx' && summary?.length) {
-      this.downloadXLSXWithSummary(exportData, summary, `shift-report-${this.getDateString()}`);
+    if (format === 'xlsx') {
+      const issueSheet = buildIssueSheet(
+        shifts.map((shift) => ({
+          date: shift.operationalDate ?? null,
+          shiftType: shift.shiftType ?? null,
+          operator: shiftColumnMappings.driver.getValue(shift) as string,
+          vehicle: shiftColumnMappings.vehicle.getValue(shift) as string,
+          issues: shift.issueInspections,
+        })),
+      );
+      this.downloadXLSXWithSummary(exportData, summary ?? [], `shift-report-${this.getDateString()}`, issueSheet);
       return;
     }
 
@@ -614,16 +666,21 @@ export class ShiftReportExportService {
     data: Record<string, unknown>[],
     summary: [string, string, string | number, string][],
     filename: string,
+    issueSheet?: XLSX.WorkSheet | null,
   ): void {
     const workbook = XLSX.utils.book_new();
 
-    const summarySheet = XLSX.utils.aoa_to_sheet([['Хэсэг', 'Үзүүлэлт', 'Утга', 'Тайлбар'], ...summary]);
-    summarySheet['!cols'] = [{ wch: 22 }, { wch: 36 }, { wch: 26 }, { wch: 60 }];
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Тойм');
+    if (summary.length) {
+      const summarySheet = XLSX.utils.aoa_to_sheet([['Хэсэг', 'Үзүүлэлт', 'Утга', 'Тайлбар'], ...summary]);
+      summarySheet['!cols'] = [{ wch: 22 }, { wch: 36 }, { wch: 26 }, { wch: 60 }];
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Тойм');
+    }
 
     const worksheet = XLSX.utils.json_to_sheet(data);
-    worksheet['!cols'] = Object.keys(data[0] ?? {}).map(() => ({ wch: 15 }));
+    worksheet['!cols'] = Object.keys(data[0] ?? {}).map((key) => ({ wch: key === 'Тэмдэглэл' ? 60 : 15 }));
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Тайлан');
+
+    if (issueSheet) XLSX.utils.book_append_sheet(workbook, issueSheet, 'Аюултай үзлэг');
 
     XLSX.writeFile(workbook, `${filename}.xlsx`);
   }
@@ -846,7 +903,20 @@ export class ShiftReportExportService {
           const commentText = getRowComment(row);
           const statusLabel = row.issueCount > 0 ? 'Аюултай' : 'Анхаарах';
 
-          if (issueNames.length === 0) {
+          // Шинэ backend: үзүүлэлт бүр өөрийн төлөв, тэмдэглэлтэй.
+          if (row.issueInspections?.length) {
+            row.issueInspections.forEach((issue, i) => {
+              summaryRows.push([
+                isFirstForVehicle && i === 0 ? vehicleCode : '',
+                `${issue.name ?? '-'}${issue.group ? ` (${issue.group})` : ''}`,
+                ISSUE_STATUS_LABEL[issue.status] ?? issue.status,
+                issue.notes ?? '-',
+                shiftLabel,
+                operatorName,
+              ]);
+              isFirstForVehicle = false;
+            });
+          } else if (issueNames.length === 0) {
             summaryRows.push([
               isFirstForVehicle ? vehicleCode : '',
               '-',
@@ -926,6 +996,18 @@ export class ShiftReportExportService {
     ws2['!autofilter'] = { ref: `A5:${lastColumnLetter}5` };
 
     XLSX.utils.book_append_sheet(workbook, ws2, 'Бүх мэдээлэл');
+
+    // ===== Sheet 3: Аюултай үзлэг (үзүүлэлт бүр, тэмдэглэлтэй) =====
+    const issueSheet = buildIssueSheet(
+      (originalRows ?? []).map((row) => ({
+        date: row.operationalDate,
+        shiftType: row.shiftType,
+        operator: `${row.driverFirstName} ${row.driverLastName}`.trim(),
+        vehicle: row.vehicleCode,
+        issues: row.issueInspections,
+      })),
+    );
+    if (issueSheet) XLSX.utils.book_append_sheet(workbook, issueSheet, 'Аюултай үзлэг');
     XLSX.writeFile(workbook, `${filename}.xlsx`);
   }
 
