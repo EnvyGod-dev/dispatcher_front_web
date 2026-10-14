@@ -138,7 +138,9 @@ const Select: React.FC<SelectProps> = ({
     allowCreate && searchValue.trim() !== '' && !hasExactMatch;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    // modal: the list is portaled outside any surrounding Dialog, whose scroll
+    // lock would otherwise swallow mouse-wheel/touch scrolling inside it.
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
