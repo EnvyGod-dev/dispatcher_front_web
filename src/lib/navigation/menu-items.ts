@@ -21,7 +21,6 @@ import {
   markscheiderReportReadRoles,
   miningBlockReadRoles,
   miningReportRoles,
-  miningRouteReadRoles,
   stockpileReadRoles,
 } from '@/services/roles';
 
@@ -192,11 +191,6 @@ export const menuSections: MenuSection[] = [
             roles: miningBlockReadRoles,
           },
           {
-            name: 'Маршрут',
-            path: '/routes',
-            roles: miningRouteReadRoles,
-          },
-          {
             name: 'Техник бүртгэл',
             path: '/vehicles',
             roles: dailyPlanReadRoles,
@@ -214,7 +208,7 @@ export const menuSections: MenuSection[] = [
             badge: 'new',
           },
           {
-            name: 'Овоолго',
+            name: 'Овоолго, маршрут',
             path: '/stockpiles',
             roles: stockpileReadRoles,
           },

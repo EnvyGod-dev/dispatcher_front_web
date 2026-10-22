@@ -1,7 +1,8 @@
 'use client';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { Layers, Plus, Route as RouteIcon } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
@@ -24,6 +25,10 @@ import StockpileFormSidebar from './Sidebar';
 import { formatDate } from '@/lib/time-formatter';
 import { useAuth } from '@/components/AuthProvider';
 import { hasRole, stockpileActionRoles } from '@/services/roles';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import RoutesPanel from '../routes/RoutesPanel';
+
+type StockpileTab = 'stockpiles' | 'routes';
 
 const StockpileTypeMap: Record<string, string> = {
   coal: 'Нүүрс',
@@ -48,6 +53,22 @@ export default function MaterialPage() {
     Stockpile | undefined
   >();
   const [filters, setFilters] = useState<StockpileFilters>({});
+  const [tab, setTab] = useState<StockpileTab>('stockpiles');
+
+  // ?tab=routes (хуучин /routes холбоос энд шилжинэ).
+  useEffect(() => {
+    const initial = new URLSearchParams(window.location.search).get('tab');
+    if (initial === 'routes') setTab('routes');
+  }, []);
+
+  const handleTabChange = (value: string) => {
+    const next = value as StockpileTab;
+    setTab(next);
+    const url = new URL(window.location.href);
+    if (next === 'routes') url.searchParams.set('tab', 'routes');
+    else url.searchParams.delete('tab');
+    window.history.replaceState(null, '', url.toString());
+  };
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['stockpiles', { offset, limit, ...filters }],
@@ -151,36 +172,31 @@ export default function MaterialPage() {
   return (
     <div>
       <PageBreadcrumb
-        pageTitle="Бүртгэлтэй овоолгын жагсаалт"
-        actions={
-          actionRole
-            ? {
-              label: 'Овоолго нэмэх',
-              onClick: () => setIsSidebarOpen(true),
-              variant: 'primary',
-              icon: (
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-              ),
-            }
-            : undefined
-        }
+        pageTitle="Овоолго ба маршрут"
+        description="Буулгах овоолго болон тээврийн маршрутын бүртгэл"
       />
+
+      <Tabs value={tab} onValueChange={handleTabChange}>
+        <TabsList>
+          <TabsTrigger value="stockpiles">
+            <Layers />
+            Овоолго
+          </TabsTrigger>
+          <TabsTrigger value="routes">
+            <RouteIcon />
+            Маршрут
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="routes" className="mt-0">
+          <RoutesPanel />
+        </TabsContent>
+
+        <TabsContent value="stockpiles" className="mt-0">
 
       <div className="space-y-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 mb-4">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_auto] lg:items-center">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_auto_auto] lg:items-center">
             <div>
               <Input
                 type="text"
@@ -209,7 +225,19 @@ export default function MaterialPage() {
             </div>
             {hasActiveFilters ? (
               <Button size="sm" variant="outline" onClick={handleClearFilters}>
-                Clear
+                Цэвэрлэх
+              </Button>
+            ) : (
+              <div />
+            )}
+            {actionRole ? (
+              <Button
+                size="sm"
+                variant="primary"
+                startIcon={<Plus className="h-4 w-4" />}
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                Овоолго нэмэх
               </Button>
             ) : (
               <div />
@@ -236,6 +264,9 @@ export default function MaterialPage() {
           isLoading={isLoading}
         />
       </div>
+
+        </TabsContent>
+      </Tabs>
 
       <StockpileFormSidebar
         isOpen={isSidebarOpen}
