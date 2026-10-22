@@ -15,8 +15,8 @@ import {
 import employeeService from '@/services/internal/employee';
 import type { Employee } from '@/services/internal/employee/type';
 import { shiftTypeItems, type CreateShiftInput } from '@/services/internal/shift/types';
-import vehicleService from '@/services/internal/vehicle';
-import type { Vehicle } from '@/services/internal/vehicle/types';
+import { vehicleTypeLabels } from '@/services/internal/vehicle/types';
+import { useShiftVehicles } from '../hooks/useShiftVehicles';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -57,24 +57,17 @@ export default function ShiftCreateDialog({
     staleTime: 60000,
   });
 
-  const { data: vehiclesData, isLoading: isVehiclesLoading } = useQuery({
-    queryKey: ['shift-create', 'vehicles'],
-    queryFn: () => vehicleService.getShiftVehicles({ offset: 0, limit: 500, type: 'truck' }),
-    enabled: open,
-    staleTime: 60000,
-  });
+  const { vehicles, isLoading: isVehiclesLoading } = useShiftVehicles(open);
 
   const drivers = useMemo(
     () =>
       (employeesData?.data || []).filter(
-        (employee: Employee) => employee.role === 'driver' && employee.isActive
+        (employee: Employee) =>
+          (employee.role === 'driver' ||
+            employee.role === 'assistant_operator') &&
+          employee.isActive
       ),
     [employeesData]
-  );
-
-  const vehicles = useMemo(
-    () => (vehiclesData?.data || []).filter((vehicle: Vehicle) => vehicle.type === 'truck'),
-    [vehiclesData]
   );
 
   const driverOptions = useMemo(
@@ -106,10 +99,18 @@ export default function ShiftCreateDialog({
     () =>
       vehicles.map((vehicle) => ({
         value: vehicle.id,
-        label: vehicle.code ? `${vehicle.code} ${vehicle.vehicleNumber || ''}`.trim() : vehicle.name,
+        label: [
+          vehicle.code
+            ? `${vehicle.code} ${vehicle.vehicleNumber || ''}`.trim()
+            : vehicle.name,
+          vehicleTypeLabels[vehicle.type],
+        ]
+          .filter(Boolean)
+          .join(' · '),
         searchText: [
           vehicle.code,
           vehicle.name,
+          vehicleTypeLabels[vehicle.type],
           vehicle.vehicleNumber,
           vehicle.mineNumber,
         ]
