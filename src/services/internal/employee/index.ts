@@ -1,6 +1,5 @@
 import http from '../../index';
 import { uploadFile } from '@/services/helper/upload-file';
-import { uploadBulkFile } from '@/lib/file-upload';
 import {
   CreateEmployeeInput,
   DriverShiftGroup,
@@ -10,6 +9,12 @@ import {
   UpdateEmployeeStatusInput,
   UserStatus,
 } from './type';
+
+export type BulkCreateEmployeesResult = {
+  success: number;
+  failed: number;
+  errors: Array<{ row: number; error: string; data?: unknown }>;
+};
 
 const employeeService = {
   getEmployees: async (filters: EmployeeFilters) => {
@@ -57,18 +62,20 @@ const employeeService = {
     return await http.put('/api/admin/user/driver-shift-group', { body });
   },
 
-  bulkCreateEmployees: async (formData: FormData) => {
-    const file = formData.get('file') as File;
+  /**
+   * Excel-ээс олноор бүртгэх. Файлыг `prepareEmployeeImport`-оор бэлдсэн байна.
+   * http клиентээр илгээдэг тул байгууллагын subdomain header, алдааны мессеж зөв дамжина.
+   */
+  bulkCreateEmployees: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
 
-    if (!file) {
-      throw new Error('No file provided');
-    }
+    const response = await http.post<BulkCreateEmployeesResult>(
+      '/api/admin/register-user/bulk',
+      { body: formData as unknown as Record<string, unknown> }
+    );
 
-    return await uploadBulkFile<{
-      success: number;
-      failed: number;
-      errors: Array<{ row: number; error: string; data: any }>;
-    }>(file, '/api/admin/register-user/bulk');
+    return response.body;
   },
 
   deleteEmployee: async (userId: string) => {
