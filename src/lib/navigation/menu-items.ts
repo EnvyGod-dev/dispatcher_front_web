@@ -135,6 +135,11 @@ export const menuSections: MenuSection[] = [
             path: '/time-management/repair',
             roles: ['admin', 'dispatcher', 'mechanic'],
           },
+          {
+            name: 'Сул зогсолт, засварын төрөл',
+            path: '/time-management/reasons',
+            roles: ['admin', 'dispatcher', 'mechanic'],
+          },
         ],
 
         roles: [

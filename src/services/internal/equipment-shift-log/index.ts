@@ -44,11 +44,17 @@ export type VehicleOption = {
 // REASONS
 // ============================================================
 
+/** Засварын шалтгааны ангилал (зөвхөн repair-reasons). */
+export type RepairReasonCategory =
+    | 'repair'
+    | 'technical_idle';
+
 export type ReasonType = {
     id: string;
     organizationId: string;
     name: string;
     vehicleTypes: VehicleType[];
+    category?: RepairReasonCategory;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
@@ -308,6 +314,9 @@ export type CreateReasonPayload = {
     name: string;
 
     vehicleTypes?: VehicleType[];
+
+    /** Зөвхөн засварын шалтгаанд. */
+    category?: RepairReasonCategory;
 };
 
 // ============================================================
