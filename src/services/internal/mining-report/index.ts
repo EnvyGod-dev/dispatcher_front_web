@@ -3,8 +3,8 @@ import type { Crew, CrewPeriod, CrewPeriodInput, CrewSchedule, MiningReport } fr
 
 const miningReportService = {
   /** Уулын ажлын тайлан (хамгийн ихдээ 93 хоног). */
-  getReport: async (from: string, to: string) =>
-    (await http.get<MiningReport>('/api/internal/mining-report', { params: { from, to } })).body,
+  getReport: async (from: string, to: string, shiftType?: 'day' | 'night') =>
+    (await http.get<MiningReport>('/api/internal/mining-report', { params: { from, to, shiftType } })).body,
 
   /** Ээлжийн (А/Б/В/Г) хуваарь, одоогийн ээлж. */
   getCrewSchedule: async (weeks = 8, from?: string) =>

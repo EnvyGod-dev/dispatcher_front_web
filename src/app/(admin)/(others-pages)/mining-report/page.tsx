@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/components/AuthProvider';
-import { Column, DataTable, DateRangeFilter, EmptyState, ExportButton, KpiCard, LoadingRows, Panel, Pill } from '@/components/fuel/ui';
+import { Column, DataTable, DateRangeFilter, EmptyState, ExportButton, KpiCard, LoadingRows, Panel, Pill, Segmented } from '@/components/fuel/ui';
 import { exportExcel } from '@/lib/fuel/export';
 import { DateRange, errorMessage, fmtNumber, rangePresets } from '@/lib/fuel/format';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,7 @@ import { stockpileTypeMap } from '@/services/internal/stockpile/types';
 import { useQuery } from '@tanstack/react-query';
 import { ApexOptions } from 'apexcharts';
 import dayjs from 'dayjs';
-import { AlertTriangle, Construction, Fuel, Mountain, Trophy, Truck, UserRound } from 'lucide-react';
+import { AlertTriangle, Fuel, Mountain, Trophy } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
@@ -31,6 +31,14 @@ const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
 const SHIFT_COLORS = { day: '#c58a12', night: '#35507a' };
 
 const MAX_DAYS = 93;
+
+type ShiftFilter = 'all' | 'day' | 'night';
+
+const shiftFilterOptions: { value: ShiftFilter; label: string }[] = [
+  { value: 'all', label: 'Бүх ээлж' },
+  { value: 'day', label: 'Өдөр' },
+  { value: 'night', label: 'Шөнө' },
+];
 
 const m3 = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `${fmtNumber(v)} м³`);
 const liters = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `${fmtNumber(v)} л`);
@@ -63,13 +71,14 @@ export default function MiningReportPage() {
   const { user } = useAuth();
   const allowed = !!user && (miningReportRoles as readonly string[]).includes(user.role as UserRole);
   const [range, setRange] = useState<DateRange>(rangePresets[0].range());
+  const [shift, setShift] = useState<ShiftFilter>('all');
 
   const days = dayjs(range.to).diff(dayjs(range.from), 'day');
   const rangeError = days < 0 ? 'Эхлэх огноо дуусах огнооноос хойш байна.' : days > MAX_DAYS ? `Хугацаа ${MAX_DAYS} хоногоос ихгүй байна.` : null;
 
   const report = useQuery({
-    queryKey: ['mining-report', range],
-    queryFn: () => miningReportService.getReport(range.from, range.to),
+    queryKey: ['mining-report', range, shift],
+    queryFn: () => miningReportService.getReport(range.from, range.to, shift === 'all' ? undefined : shift),
     enabled: allowed && !rangeError,
   });
   const schedule = useQuery({
@@ -118,8 +127,11 @@ export default function MiningReportPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <DateRangeFilter value={range} onChange={setRange} />
-        <ExportButton onClick={() => data && exportReport(data)} disabled={!data || !!rangeError} />
+        <div className="flex flex-wrap items-center gap-3">
+          <DateRangeFilter value={range} onChange={setRange} />
+          <Segmented value={shift} onChange={setShift} options={shiftFilterOptions} size="sm" />
+        </div>
+        <ExportButton onClick={() => data && exportReport(data, shift)} disabled={!data || !!rangeError} />
       </div>
 
       {rangeError ? (
@@ -135,13 +147,13 @@ export default function MiningReportPage() {
           <p className="text-sm text-error-600">{errorMessage(report.error)}</p>
         </Panel>
       ) : data ? (
-        <ReportBody data={data} />
+        <ReportBody data={data} shift={shift} />
       ) : null}
     </div>
   );
 }
 
-function ReportBody({ data }: { data: MiningReport }) {
+function ReportBody({ data, shift }: { data: MiningReport; shift: ShiftFilter }) {
   const t = data.totals;
   const h = data.highlights;
   const hasWork = t.shifts > 0 || t.fleetFuelLiters > 0 || data.excavators.length > 0;
@@ -185,12 +197,12 @@ function ReportBody({ data }: { data: MiningReport }) {
 
           <CrewTopOperators crews={data.crews} from={data.from} to={data.to} />
 
-          <Panel title="Өдөр тутмын бүтээл" description="Өдрийн ба шөнийн ээлжээр, ээлжийн бригадтай">
-            <DailyChart days={data.days} />
+          <Panel title="Өдөр тутмын бүтээл" description={shift === 'all' ? 'Өдрийн ба шөнийн ээлжээр' : shift === 'day' ? 'Өдрийн ээлж' : 'Шөнийн ээлж'}>
+            <DailyChart days={data.days} shift={shift} />
           </Panel>
 
           <Panel title="Өдрөөр">
-            <DataTable columns={dayColumns} rows={[...data.days].reverse()} rowKey={(d) => d.date} pageSize={31} />
+            <DataTable columns={dayColumns(shift)} rows={[...data.days].reverse()} rowKey={(d) => d.date} pageSize={31} />
           </Panel>
 
           <div className="grid grid-cols-1 gap-6 2xl:grid-cols-2">
@@ -238,27 +250,9 @@ function ReportBody({ data }: { data: MiningReport }) {
   );
 }
 
-/** Онцлох техник, оператор: жижиг, мөр шилждэг (wrap) хайрцгууд. */
+/** Онцлох: хамгийн их түлш авсан техник (жижиг, мөр шилждэг хайрцаг). */
 function Highlights({ highlights: h }: { highlights?: MiningHighlights }) {
   const items = [
-    {
-      label: 'Шөнийн шилдэг оператор',
-      value: h?.nightOperator?.name,
-      hint: h?.nightOperator ? `${m3(h.nightOperator.m3)} · ${h.nightOperator.trips} рейс` : null,
-      icon: <UserRound className="size-4" />,
-    },
-    {
-      label: 'Шөнийн шилдэг машин',
-      value: h?.nightTruck ? h.nightTruck.code || h.nightTruck.name : null,
-      hint: h?.nightTruck ? `${m3(h.nightTruck.m3)} · ${h.nightTruck.trips} рейс` : null,
-      icon: <Truck className="size-4" />,
-    },
-    {
-      label: 'Шөнийн шилдэг экскаватор',
-      value: h?.nightExcavator ? h.nightExcavator.code || h.nightExcavator.name : null,
-      hint: h?.nightExcavator ? `${m3(h.nightExcavator.m3)} · ${h.nightExcavator.trips} рейс` : null,
-      icon: <Construction className="size-4" />,
-    },
     {
       label: 'Хамгийн их түлш авсан',
       value: h?.topFuelVehicle ? h.topFuelVehicle.code || h.topFuelVehicle.name : null,
@@ -454,10 +448,16 @@ function CrewCards({ crews }: { crews: MiningCrewRow[] }) {
   );
 }
 
-function DailyChart({ days }: { days: MiningDayRow[] }) {
+function DailyChart({ days, shift }: { days: MiningDayRow[]; shift: ShiftFilter }) {
+  const allSeries = [
+    { key: 'day' as const, name: 'Өдөр', color: SHIFT_COLORS.day, data: days.map((d) => d.day.totalM3) },
+    { key: 'night' as const, name: 'Шөнө', color: SHIFT_COLORS.night, data: days.map((d) => d.night.totalM3) },
+  ];
+  const series = allSeries.filter((s) => shift === 'all' || s.key === shift);
+
   const options: ApexOptions = {
     chart: { type: 'bar', stacked: true, fontFamily: 'Gip, sans-serif', toolbar: { show: false }, zoom: { enabled: false } },
-    colors: [SHIFT_COLORS.day, SHIFT_COLORS.night],
+    colors: series.map((s) => s.color),
     plotOptions: { bar: { columnWidth: days.length > 20 ? '70%' : '45%', borderRadius: 3, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last' } },
     dataLabels: { enabled: false },
     legend: { position: 'top', horizontalAlign: 'left', fontSize: '13px', markers: { size: 6 } },
@@ -476,7 +476,7 @@ function DailyChart({ days }: { days: MiningDayRow[] }) {
       x: {
         formatter: (_v: number, opts?: { dataPointIndex: number }) => {
           const d = days[opts?.dataPointIndex ?? 0];
-          return d ? `${dayLabel(d.date)} · өдөр ${d.day.label}, шөнө ${d.night.label}` : '';
+          return d ? dayLabel(d.date) : '';
         },
       },
       y: { formatter: (v: number) => m3(v) },
@@ -486,10 +486,7 @@ function DailyChart({ days }: { days: MiningDayRow[] }) {
   return (
     <ReactApexChart
       options={options}
-      series={[
-        { name: 'Өдөр', data: days.map((d) => d.day.totalM3) },
-        { name: 'Шөнө', data: days.map((d) => d.night.totalM3) },
-      ]}
+      series={series.map(({ name, data }) => ({ name, data }))}
       type="bar"
       height={300}
     />
@@ -535,10 +532,10 @@ const slotCell = (s: MiningDayRow['day'], night: boolean) => (
   </div>
 );
 
-const dayColumns: Column<MiningDayRow>[] = [
+const dayColumns = (shift: ShiftFilter): Column<MiningDayRow>[] => [
   { key: 'date', header: 'Огноо', render: (d) => <span className="font-medium text-gray-800 dark:text-white/90">{dayLabel(d.date)}</span> },
-  { key: 'day', header: 'Өдөр', render: (d) => slotCell(d.day, false) },
-  { key: 'night', header: 'Шөнө', render: (d) => slotCell(d.night, true) },
+  ...(shift !== 'night' ? [{ key: 'day', header: 'Өдөр', render: (d: MiningDayRow) => slotCell(d.day, false) }] : []),
+  ...(shift !== 'day' ? [{ key: 'night', header: 'Шөнө', render: (d: MiningDayRow) => slotCell(d.night, true) }] : []),
   { key: 'coal', header: 'Нүүрс', align: 'right', render: (d) => <span className="tabular-nums">{fmtNumber(d.coalM3)}</span> },
   { key: 'soil', header: 'Хөрс', align: 'right', render: (d) => <span className="tabular-nums">{fmtNumber(d.soilM3)}</span> },
   { key: 'total', header: 'Нийт м³', align: 'right', render: (d) => <span className="font-semibold tabular-nums">{fmtNumber(d.totalM3)}</span> },
@@ -630,7 +627,7 @@ const operatorColumns: Column<MiningOperatorRow>[] = [
   { key: 'fuel', header: 'Түлш', align: 'right', render: (o) => liters(o.fuelLiters) },
 ];
 
-function exportReport(data: MiningReport) {
+function exportReport(data: MiningReport, shift: ShiftFilter) {
   const t = data.totals;
   type Pair = [string, string | number | null];
   const summary: Pair[] = [
@@ -673,7 +670,7 @@ function exportReport(data: MiningReport) {
   ];
 
   exportExcel(
-    `uul-ajlyn-tailan_${data.from}_${data.to}`,
+    `uul-ajlyn-tailan_${data.from}_${data.to}${shift === 'all' ? '' : `_${shift}`}`,
     [
       {
         name: 'Нэгдсэн',
