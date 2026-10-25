@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { DateRangeFilter } from '@/components/fuel/ui';
-import type { DateRange } from '@/lib/fuel/format';
+import { rangePresets, type DateRange } from '@/lib/fuel/format';
 import Select from '@/components/form/Select';
 import DynamicTable from '@/components/tables/DynamicTable';
 import Pagination from '@/components/tables/Pagination';
@@ -41,6 +41,20 @@ import { useExcelExport } from '@/lib/export/use-excel-export';
 import { stockpileTypeMap } from '@/services/internal/stockpile/types';
 
 type ApiError = Error & { status?: number };
+
+/** Өдрийн төлөвлөлтөд маргаашийнх ч хэрэгтэй. */
+const dailyPlanPresets: typeof rangePresets = [
+  rangePresets[0],
+  {
+    key: 'tomorrow',
+    label: 'Маргааш',
+    range: () => {
+      const d = dayjs().add(1, 'day').format('YYYY-MM-DD');
+      return { from: d, to: d };
+    },
+  },
+  ...rangePresets.slice(1),
+];
 
 export default function DailyPlansPage() {
   const { user } = useAuth();
@@ -398,6 +412,7 @@ export default function DailyPlansPage() {
               Огноо:
             </label>
             <DateRangeFilter
+              presets={dailyPlanPresets}
               value={dateRange}
               onChange={(range) => {
                 setDateRange(range);
