@@ -17,7 +17,8 @@ import { toast } from 'sonner';
 
 import { useAuth } from '@/components/AuthProvider';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
-import DatePicker from '@/components/form/date-picker';
+import { DateRangeFilter } from '@/components/fuel/ui';
+import type { DateRange } from '@/lib/fuel/format';
 import Select from '@/components/form/Select';
 import DynamicTable from '@/components/tables/DynamicTable';
 import Pagination from '@/components/tables/Pagination';
@@ -49,9 +50,10 @@ export default function DailyPlansPage() {
   const [reactivationWarningPlan, setReactivationWarningPlan] = useState<
     DailyPlan | undefined
   >();
-  const [selectedDate, setSelectedDate] = useState<string>(
-    dayjs().format('YYYY-MM-DD'),
-  );
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const today = dayjs().format('YYYY-MM-DD');
+    return { from: today, to: today };
+  });
   const [selectedShiftType, setSelectedShiftType] = useState<
     ShiftType | undefined
   >(undefined);
@@ -59,13 +61,14 @@ export default function DailyPlansPage() {
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: [
       'daily-plans',
-      { offset, limit, date: selectedDate, shiftType: selectedShiftType },
+      { offset, limit, ...dateRange, shiftType: selectedShiftType },
     ],
     queryFn: () =>
-      dailyPlanService.getDailyPlans({
+      dailyPlanService.getDailyPlansRange({
         offset,
         limit,
-        date: selectedDate,
+        startDate: dateRange.from,
+        endDate: dateRange.to,
         shiftType: selectedShiftType,
       }),
     enabled: !!user,
@@ -341,21 +344,17 @@ export default function DailyPlansPage() {
       />
 
       {/* filters section */}
-      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-600 dark:bg-gray-900">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-600 dark:bg-gray-900">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2">
             <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Огноо:
             </label>
-            <DatePicker
-              id="daily-plan-date-picker"
-              placeholder="Огноо сонгох"
-              mode="single"
-              onChange={(currentDateString) => {
-                setSelectedDate(
-                  dayjs(currentDateString[0]).format('YYYY-MM-DD'),
-                );
+            <DateRangeFilter
+              value={dateRange}
+              onChange={(range) => {
+                setDateRange(range);
                 paginate(1, limit);
               }}
             />
