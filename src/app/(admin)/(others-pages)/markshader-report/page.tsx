@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import DateRangeInputs from '@/components/form/DateRangeInputs';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Pagination from '@/components/tables/Pagination';
 import { ConfirmDialog } from '@/components/ui/alert/Alert';
@@ -13,16 +14,6 @@ import MarkshaderReportFormSidebar from './Sidebar';
 import { useAuth } from '@/components/AuthProvider';
 import { hasRole, markscheiderReportActionRoles } from '@/services/roles';
 import MarkshaderImportExport from './ImportExport';
-
-function getDateOptions(days = 30): { label: string; value: string }[] {
-  const options = [];
-  for (let i = 0; i < days; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    options.push({ label: d.toLocaleDateString('en-CA'), value: d.toLocaleDateString('en-CA') });
-  }
-  return options;
-}
 
 const formatVolume = (value: string | null | undefined) => {
   if (!value || value === '0') return <span className="text-gray-300 dark:text-gray-600">—</span>;
@@ -50,7 +41,6 @@ export default function MarkshaderReportsPage() {
     d.setDate(d.getDate() - 1);
     return d.toLocaleDateString('en-CA');
   })();
-  const dateOptions = getDateOptions(30);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showImportExport, setShowImportExport] = useState(false);
@@ -147,19 +137,14 @@ export default function MarkshaderReportsPage() {
 
       {/* Шүүлт */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <select value={startDate} onChange={(e) => setStartDate(e.target.value)} className={selectClass}>
-          {dateOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-
-        <span className="text-gray-400 text-xs">—</span>
-
-        <select value={endDate} onChange={(e) => setEndDate(e.target.value)} className={selectClass}>
-          {dateOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+        {/* Огноог бичиж эсвэл сонгож оруулна. */}
+        <DateRangeInputs
+          value={{ from: startDate || undefined, to: endDate || undefined }}
+          onChange={(range) => {
+            setStartDate(range.from ?? '');
+            setEndDate(range.to ?? '');
+          }}
+        />
 
         <select
           value={selectedVehicleId}

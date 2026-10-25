@@ -304,11 +304,23 @@ export function Segmented<T extends string>({
   );
 }
 
-export function DateRangeFilter({ value, onChange }: { value: DateRange; onChange: (value: DateRange) => void }) {
-  const active = rangePresets.find((p) => {
+export function DateRangeFilter({
+  value,
+  onChange,
+  presets = rangePresets,
+}: {
+  value: DateRange;
+  onChange: (value: DateRange) => void;
+  presets?: typeof rangePresets;
+}) {
+  const active = presets.find((p) => {
     const r = p.range();
     return r.from === value.from && r.to === value.to;
   })?.key;
+
+  // min/max хязгаар тавихгүй (ирээдүйн огноо ч сонгогдоно); эхлэх > дуусах бол нөгөөг нь тааруулна.
+  const setFrom = (from: string) => onChange({ from, to: from > value.to ? from : value.to });
+  const setTo = (to: string) => onChange({ from: to < value.from ? to : value.from, to });
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -316,21 +328,21 @@ export function DateRangeFilter({ value, onChange }: { value: DateRange; onChang
         <TextInput
           type="date"
           value={value.from}
-          max={value.to}
-          onChange={(e) => e.target.value && onChange({ ...value, from: e.target.value })}
+          onChange={(e) => e.target.value && setFrom(e.target.value)}
           className="w-[150px]"
+          aria-label="Эхлэх огноо"
         />
         <span className="text-gray-400">—</span>
         <TextInput
           type="date"
           value={value.to}
-          min={value.from}
-          onChange={(e) => e.target.value && onChange({ ...value, to: e.target.value })}
+          onChange={(e) => e.target.value && setTo(e.target.value)}
           className="w-[150px]"
+          aria-label="Дуусах огноо"
         />
       </div>
       <div className="flex flex-wrap gap-1">
-        {rangePresets.map((p) => (
+        {presets.map((p) => (
           <button
             key={p.key}
             type="button"

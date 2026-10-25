@@ -20,11 +20,15 @@ export type Stockpile = {
   createdAt: string;
   updatedAt: string;
   deactivatedAt: string;
+  /** Холбосон маршрут (заавал биш). */
+  routeId?: string | null;
+  routeCode?: string | null;
 };
 
 export type CreateStockpileInput = {
   type: StockpileType;
   layerNumber: string;
+  routeId?: string | null;
 };
 
 export type StockpileResponse = {

@@ -15,6 +15,7 @@ import {
 } from 'sonner';
 
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
+import DateRangeInputs from '@/components/form/DateRangeInputs';
 import { exportShiftLogs } from '@/lib/export/shift-logs';
 import { useExcelExport } from '@/lib/export/use-excel-export';
 import Pagination from '@/components/tables/Pagination';
@@ -48,39 +49,6 @@ import TimeManagementSidebar from './Sidebar';
 // HELPERS
 // ============================================================
 
-function getDateOptions(
-    days = 30
-): {
-    label: string;
-    value: string;
-}[] {
-    const options = [];
-
-    for (
-        let i = 0;
-        i < days;
-        i++
-    ) {
-        const date =
-            new Date();
-
-        date.setDate(
-            date.getDate() - i
-        );
-
-        const value =
-            date.toLocaleDateString(
-                'en-CA'
-            );
-
-        options.push({
-            label: value,
-            value,
-        });
-    }
-
-    return options;
-}
 
 const formatHours = (
     value:
@@ -217,14 +185,6 @@ export default function TimeManagementPage() {
             []
         );
 
-    const dateOptions =
-        useMemo(
-            () =>
-                getDateOptions(
-                    30
-                ),
-            []
-        );
 
     // ========================================================
     // STATE
@@ -465,9 +425,6 @@ export default function TimeManagementPage() {
     // STYLES
     // ========================================================
 
-    const selectClass =
-        'h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-blue-500 dark:focus:ring-blue-950';
-
     const thClass =
         'px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 whitespace-nowrap border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400';
 
@@ -554,97 +511,18 @@ export default function TimeManagementPage() {
             ================================================= */}
 
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
-                <span className="mr-1 text-xs font-medium text-gray-500">
-                    Огноо:
-                </span>
-
-                <select
-                    value={
-                        startDate
-                    }
-                    onChange={(
-                        event
-                    ) => {
-                        setStartDate(
-                            event
-                                .target
-                                .value
-                        );
-
-                        paginate(
-                            1,
-                            limit
-                        );
+                {/* Огноог бичиж эсвэл сонгож оруулна (өмнө нь сүүлийн 30 хоногоос л сонгодог байсан). */}
+                <DateRangeInputs
+                    value={{
+                        from: startDate || undefined,
+                        to: endDate || undefined,
                     }}
-                    className={
-                        selectClass
-                    }
-                >
-                    {dateOptions.map(
-                        (
-                            option
-                        ) => (
-                            <option
-                                key={
-                                    option.value
-                                }
-                                value={
-                                    option.value
-                                }
-                            >
-                                {
-                                    option.label
-                                }
-                            </option>
-                        )
-                    )}
-                </select>
-
-                <span className="text-xs text-gray-400">
-                    —
-                </span>
-
-                <select
-                    value={
-                        endDate
-                    }
-                    onChange={(
-                        event
-                    ) => {
-                        setEndDate(
-                            event
-                                .target
-                                .value
-                        );
-
-                        paginate(
-                            1,
-                            limit
-                        );
+                    onChange={(range) => {
+                        setStartDate(range.from ?? '');
+                        setEndDate(range.to ?? '');
+                        paginate(1, limit);
                     }}
-                    className={
-                        selectClass
-                    }
-                >
-                    {dateOptions.map(
-                        (
-                            option
-                        ) => (
-                            <option
-                                key={
-                                    option.value
-                                }
-                                value={
-                                    option.value
-                                }
-                            >
-                                {
-                                    option.label
-                                }
-                            </option>
-                        )
-                    )}
-                </select>
+                />
             </div>
 
             {/* ================================================
