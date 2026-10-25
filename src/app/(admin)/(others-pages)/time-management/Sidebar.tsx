@@ -12,13 +12,15 @@ import type {
     ShiftLog,
 } from '@/services/internal/equipment-shift-log';
 
-import TimeManagementForm from './TimeManagmentForm';
+import TimeManagementForm, { type TimeLogPreset } from './TimeManagmentForm';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
     editingLog?: ShiftLog;
+    /** Техникийн төрлөөс сонгосон техник (шинэ бүртгэл). */
+    preset?: TimeLogPreset;
 }
 
 export default function TimeManagementSidebar({
@@ -26,6 +28,7 @@ export default function TimeManagementSidebar({
     onClose,
     onSuccess,
     editingLog,
+    preset,
 }: Props) {
     const isEditMode =
         Boolean(editingLog);
@@ -103,10 +106,15 @@ export default function TimeManagementSidebar({
                                         <TimeManagementForm
                                             key={
                                                 editingLog?.id ??
-                                                'new'
+                                                (preset
+                                                    ? `${preset.vehicleId}-${preset.operationalDate}-${preset.shiftType}`
+                                                    : 'new')
                                             }
                                             editingLog={
                                                 editingLog
+                                            }
+                                            preset={
+                                                preset
                                             }
                                             onCancel={
                                                 onClose

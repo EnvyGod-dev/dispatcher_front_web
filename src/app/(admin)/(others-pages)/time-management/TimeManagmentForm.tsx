@@ -34,8 +34,18 @@ import ReasonEditorModal from './ReasonEditorModal';
 // PROPS
 // ============================================================
 
+/** Техникийн төрлөөс сонгосон техник: огноо, ээлж, техник урьдчилан бөглөгдөнө. */
+export type TimeLogPreset = {
+    vehicleId: string;
+    vehicleType?: VehicleType;
+    vehicleLabel: string;
+    operationalDate: string;
+    shiftType: 'day' | 'night';
+};
+
 interface Props {
     editingLog?: ShiftLog;
+    preset?: TimeLogPreset;
     onCancel: () => void;
     onSuccess: () => void;
 }
@@ -137,6 +147,7 @@ const getUserLabel = (
 
 export default function TimeManagementForm({
     editingLog,
+    preset,
     onCancel,
     onSuccess,
 }: Props) {
@@ -168,7 +179,7 @@ export default function TimeManagementForm({
         operationalDate,
         setOperationalDate,
     ] = useState(
-        today
+        preset?.operationalDate ?? today
     );
 
     const [
@@ -176,19 +187,24 @@ export default function TimeManagementForm({
         setShiftType,
     ] = useState<
         'day' | 'night'
-    >('day');
+    >(preset?.shiftType ?? 'day');
 
     const [
         vehicleId,
         setVehicleId,
-    ] = useState('');
+    ] = useState(preset?.vehicleId ?? '');
 
     const [
         vehicleType,
         setVehicleType,
     ] = useState<
         VehicleType | undefined
-    >();
+    >(preset?.vehicleType);
+
+    // Төрлөөс сонгосон техник: огноо, ээлж, техникийг түгжинэ.
+    const isPreset =
+        !isEditMode &&
+        Boolean(preset);
 
     const [
         shiftId,
@@ -1231,7 +1247,13 @@ export default function TimeManagementForm({
     // ==========================================================
 
     const selectedVehicle =
-        isEditMode
+        isPreset && preset
+            ? {
+                type:
+                    preset.vehicleType ??
+                    null,
+            }
+            : isEditMode
             ? editingLog
                 ?.vehicle
             : vehicleOptions.find(
@@ -1310,7 +1332,7 @@ export default function TimeManagementForm({
                                 Огноо
                             </Label>
 
-                            {isEditMode ? (
+                            {isEditMode || isPreset ? (
                                 <Input
                                     className="mt-1"
                                     value={
@@ -1396,7 +1418,7 @@ export default function TimeManagementForm({
                                     selectClass
                                 }
                                 disabled={
-                                    isEditMode
+                                    isEditMode || isPreset
                                 }
                             >
                                 <option value="day">
@@ -1416,17 +1438,19 @@ export default function TimeManagementForm({
                                 Техник
                             </Label>
 
-                            {isEditMode ? (
+                            {isEditMode || isPreset ? (
                                 <Input
                                     className="mt-1"
                                     value={
-                                        editingLog
-                                            ?.vehicle
-                                            ?.mineNumber ??
-                                        editingLog
-                                            ?.vehicle
-                                            ?.name ??
-                                        ''
+                                        preset && !isEditMode
+                                            ? preset.vehicleLabel
+                                            : editingLog
+                                                ?.vehicle
+                                                ?.mineNumber ??
+                                            editingLog
+                                                ?.vehicle
+                                                ?.name ??
+                                            ''
                                     }
                                     disabled
                                 />
