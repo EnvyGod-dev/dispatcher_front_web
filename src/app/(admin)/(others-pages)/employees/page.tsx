@@ -32,6 +32,7 @@ import { employeeActionRoles, hasRole } from '@/services/roles';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/alert/Alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { FileSpreadsheet, FilterX, Search } from 'lucide-react';
 import { downloadEmployeeTemplate, exportEmployees } from '@/lib/employee/excel';
@@ -82,6 +83,8 @@ export default function EmployeePage() {
   );
 
   const [isAddSidebarOpen, setIsAddSidebarOpen] = useState(false);
+  // Жагсаалтын зураг дээр дарахад томоор харуулна.
+  const [photoPreview, setPhotoPreview] = useState<{ url: string; name: string } | null>(null);
 
   // Text filter бүр дээр шууд render/filter хийх ачааллыг багасгана.
   const deferredSearchText = useDeferredValue(searchText);
@@ -423,11 +426,27 @@ export default function EmployeePage() {
       )).build(),
 
       TableColumn.custom<Employee>('imageUrl', '', (employee) => (
-        <UserAvatar
-          imageUrl={employee.imageUrl}
-          name={employee.name || `${employee.firstName} ${employee.lastName}`}
-          size="sm"
-        />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (employee.imageUrl) {
+              setPhotoPreview({
+                url: employee.imageUrl,
+                name: employee.name || `${employee.lastName} ${employee.firstName}`,
+              });
+            }
+          }}
+          disabled={!employee.imageUrl}
+          title={employee.imageUrl ? 'Зургийг томоор харах' : undefined}
+          className="rounded-full transition hover:ring-2 hover:ring-brand-400 disabled:cursor-default disabled:hover:ring-0"
+        >
+          <UserAvatar
+            imageUrl={employee.imageUrl}
+            name={employee.name || `${employee.firstName} ${employee.lastName}`}
+            size="lg"
+          />
+        </button>
       )).build(),
 
       TableColumn.custom<Employee>('firstName', 'Нэр', (employee) => (
@@ -767,6 +786,22 @@ export default function EmployeePage() {
         onClose={handleCloseSidebar}
         editingEmployee={editingEmployee}
       />
+
+      <Dialog open={!!photoPreview} onOpenChange={(open) => !open && setPhotoPreview(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{photoPreview?.name}</DialogTitle>
+          </DialogHeader>
+          {photoPreview && (
+            // eslint-disable-next-line @next/next/no-img-element -- бүтэн хэмжээгээр, тайралтгүй
+            <img
+              src={photoPreview.url}
+              alt={photoPreview.name}
+              className="mx-auto max-h-[75vh] w-auto rounded-lg object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={!!deletingEmployee}
