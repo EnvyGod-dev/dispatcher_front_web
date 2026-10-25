@@ -8,6 +8,7 @@ import {
 import {
     useMutation,
     useQuery,
+    useQueryClient,
 } from '@tanstack/react-query';
 
 import {
@@ -44,6 +45,8 @@ import equipmentShiftLogService, {
 } from '@/services/internal/equipment-shift-log';
 
 import TimeManagementSidebar from './Sidebar';
+import VehicleTypeBoard from './VehicleTypeBoard';
+import type { TimeLogPreset } from './TimeManagmentForm';
 
 // ============================================================
 // HELPERS
@@ -202,6 +205,14 @@ export default function TimeManagementPage() {
         ShiftLog | undefined
     >();
 
+    // Техникийн төрлийн самбараас сонгосон техник (шинэ бүртгэл).
+    const [
+        preset,
+        setPreset,
+    ] = useState<
+        TimeLogPreset | undefined
+    >(undefined);
+
     const [
         deletingLog,
         setDeletingLog,
@@ -330,6 +341,9 @@ export default function TimeManagementPage() {
     // PERMISSION
     // ========================================================
 
+    const queryClient =
+        useQueryClient();
+
     const canAction =
         hasRole(
             user?.role,
@@ -388,6 +402,10 @@ export default function TimeManagementPage() {
                 undefined
             );
 
+            setPreset(
+                undefined
+            );
+
             setIsFormOpen(
                 true
             );
@@ -396,8 +414,28 @@ export default function TimeManagementPage() {
     const handleEdit = (
         log: ShiftLog
     ) => {
+        setPreset(
+            undefined
+        );
+
         setEditingLog(
             log
+        );
+
+        setIsFormOpen(
+            true
+        );
+    };
+
+    const handlePickVehicle = (
+        next: TimeLogPreset
+    ) => {
+        setEditingLog(
+            undefined
+        );
+
+        setPreset(
+            next
         );
 
         setIsFormOpen(
@@ -414,6 +452,17 @@ export default function TimeManagementPage() {
             setEditingLog(
                 undefined
             );
+
+            setPreset(
+                undefined
+            );
+
+            // Самбарын бүртгэлийн төлөв ч шинэчлэгдэнэ.
+            await queryClient.invalidateQueries({
+                queryKey: [
+                    'equipment-shift-logs',
+                ],
+            });
 
             await refetch();
         };
@@ -481,6 +530,22 @@ export default function TimeManagementPage() {
                             ),
                         }
                         : undefined
+                }
+            />
+
+            {/* ================================================
+                ТЕХНИКИЙН ТӨРЛӨӨР БҮРТГЭХ
+            ================================================= */}
+
+            <VehicleTypeBoard
+                canAction={
+                    canAction
+                }
+                onPickNew={
+                    handlePickVehicle
+                }
+                onPickExisting={
+                    handleEdit
                 }
             />
 
@@ -828,6 +893,9 @@ export default function TimeManagementPage() {
                 }
                 editingLog={
                     editingLog
+                }
+                preset={
+                    preset
                 }
                 onClose={
                     handleFormCancel

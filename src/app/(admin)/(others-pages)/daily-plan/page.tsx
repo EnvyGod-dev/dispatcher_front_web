@@ -147,7 +147,6 @@ export default function DailyPlansPage() {
       dailyPlanService.updateDailyPlan({
         id: plan.id,
         date: plan.date,
-        routeId: plan.routeId,
         pickUpBlockId: plan.pickUpBlockId,
         stockpileIds: plan.stockpileIds,
         vehicleId: plan.vehicleId,
@@ -175,7 +174,6 @@ export default function DailyPlansPage() {
       dailyPlanService.updateDailyPlan({
         id: plan.id,
         date: plan.date,
-        routeId: plan.routeId,
         pickUpBlockId: plan.pickUpBlockId,
         stockpileIds: plan.stockpileIds,
         vehicleId: plan.vehicleId,

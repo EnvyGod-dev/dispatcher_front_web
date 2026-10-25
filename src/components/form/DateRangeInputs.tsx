@@ -56,13 +56,16 @@ const chipClass = (active: boolean) =>
 export function ShiftChips({
   value,
   onChange,
+  includeAll = true,
 }: {
   value: ShiftFilterValue;
   onChange: (value: ShiftFilterValue) => void;
+  /** false бол "Бүх ээлж" сонголтгүй (заавал нэг ээлж). */
+  includeAll?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1">
-      {shiftFilterOptions.map((option) => (
+      {shiftFilterOptions.filter((option) => includeAll || option.value).map((option) => (
         <button
           key={option.value || 'all'}
           type="button"
