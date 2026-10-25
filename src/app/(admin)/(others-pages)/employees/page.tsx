@@ -504,10 +504,13 @@ export default function EmployeePage() {
     return baseColumns;
   }, [selectedEmployeeIds, user?.role]);
 
+  // Устгах эрх зөвхөн админд (хүний нөөц засах боломжтой ч устгахгүй).
+  const canDelete = user?.role === 'admin' || user?.role === 'superadmin';
+
   const actions = actionRole
     ? [
       TableActions.edit<Employee>(handleEdit),
-      TableActions.delete<Employee>(handleDelete),
+      ...(canDelete ? [TableActions.delete<Employee>(handleDelete)] : []),
     ]
     : [];
 
