@@ -10,7 +10,8 @@ export type DailyPlanStatus = 'active' | 'completed';
 export interface DailyPlan {
   id: string;
   organizationId: string;
-  routeId: string;
+  /** Овоолгын маршрутаас автоматаар авна; хоосон байж болно. */
+  routeId: string | null;
   pickUpBlockId: string;
   stockpileIds: string[];
   vehicleId: string;
@@ -24,7 +25,7 @@ export interface DailyPlan {
   date: string;
 
   // joined data
-  routeCode?: string;
+  routeCode?: string | null;
   miningBlockName?: string;
   miningBlockLayerNumber?: string;
   vehicleName?: string;
@@ -47,7 +48,8 @@ export interface DailyPlan {
 
 export type CreateDailyPlanInput = {
   date: string;
-  routeId: string;
+  /** Өгөхгүй бол backend сонгосон овоолгын маршрутаас авна. */
+  routeId?: string | null;
   pickUpBlockId: string;
   stockpileIds: string[];
   vehicleId: string;

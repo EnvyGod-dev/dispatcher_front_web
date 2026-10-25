@@ -11,7 +11,6 @@ import {
   UpdateDailyPlanInput,
 } from '@/services/internal/daily-plan/types';
 import miningBlockService from '@/services/internal/mining-block';
-import routeService from '@/services/internal/routes';
 import { ShiftType, shiftTypeItems } from '@/services/internal/shift/types';
 import stockpileService from '@/services/internal/stockpile';
 import vehicleService from '@/services/internal/vehicle';
@@ -87,7 +86,6 @@ export default function DailyPlanFormSidebar({
   onSuccess,
   editingPlan,
 }: DailyPlanFormSidebarProps) {
-  const [routeId, setRouteId] = useState('');
   const [pickUpBlockId, setPickUpBlockId] = useState('');
   const [stockpileIds, setStockpileIds] = useState<string[]>([]);
   const [transportAmount, setTransportAmount] = useState('');
@@ -96,15 +94,6 @@ export default function DailyPlanFormSidebar({
   const [date, setDate] = useState<string>(() => dayjs().format('YYYY-MM-DD'));
 
   const isEditMode = !!editingPlan;
-
-  const { data: routesData, isLoading: isLoadingRoutes } = useQuery({
-    queryKey: ['routes', 'daily-plan', 'all'],
-    enabled: isOpen,
-    queryFn: () =>
-      fetchAllPages((offset, limit) =>
-        routeService.getRoutes({ limit, offset }),
-      ),
-  });
 
   const { data: blastBlocksData, isLoading: isLoadingBlocks } = useQuery({
     queryKey: ['mining-blocks', 'pick_up', 'daily-plan', 'all'],
@@ -139,20 +128,22 @@ export default function DailyPlanFormSidebar({
 
   const isLoadingOptions =
     isOpen &&
-    (isLoadingRoutes ||
-      isLoadingBlocks ||
+    (isLoadingBlocks ||
       isLoadingStockpiles ||
       isLoadingVehicles);
 
-  const routes = routesData?.data || [];
-
   const blastBlocks = blastBlocksData?.data;
   const stockpiles = stockpilesData?.data;
+
+  // Сонгосон овоолгын (дарааллаар эхний) маршрут — backend ч ингэж тооцно.
+  const derivedRouteCode =
+    stockpileIds
+      .map((id) => stockpiles?.find((stockpile) => stockpile.id === id)?.routeCode)
+      .find(Boolean) ?? null;
   const vehicles = vehiclesData?.data;
 
   useEffect(() => {
     if (editingPlan) {
-      setRouteId(editingPlan.routeId);
       setPickUpBlockId(editingPlan.pickUpBlockId);
       setStockpileIds(editingPlan.stockpileIds);
       setTransportAmount(editingPlan.transportAmount || '');
@@ -192,7 +183,6 @@ export default function DailyPlanFormSidebar({
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const resetForm = () => {
-    setRouteId('');
     setPickUpBlockId('');
     setStockpileIds([]);
     setTransportAmount('');
@@ -202,13 +192,13 @@ export default function DailyPlanFormSidebar({
   };
 
   const handleSubmit = async () => {
-    if (!date || !routeId || !pickUpBlockId || stockpileIds.length === 0) {
+    if (!date || !pickUpBlockId || stockpileIds.length === 0) {
       toast.error('Бүх талбарыг бөглөнө үү');
       return;
     }
 
+    // Маршрутыг backend сонгосон овоолгын маршрутаас авна.
     const formData = {
-      routeId,
       pickUpBlockId,
       stockpileIds,
       transportAmount: transportAmount.trim() || undefined,
@@ -219,7 +209,6 @@ export default function DailyPlanFormSidebar({
 
     const updateData = {
       id: editingPlan?.id || '',
-      routeId,
       pickUpBlockId,
       stockpileIds,
       transportAmount: transportAmount.trim() || undefined,
@@ -324,29 +313,39 @@ export default function DailyPlanFormSidebar({
                       type="date"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
+                      onClick={(e) => {
+                        // Талбар дээр дарахад календарь нээгдэнэ; тоогоор бичиж ч болно.
+                        try {
+                          e.currentTarget.showPicker?.();
+                        } catch {
+                          /* хуучин хөтөч */
+                        }
+                      }}
                       disabled={isPending}
                       className="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-none focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90"
                     />
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {[
+                        { label: 'Өнөөдөр', value: dayjs().format('YYYY-MM-DD') },
+                        { label: 'Маргааш', value: dayjs().add(1, 'day').format('YYYY-MM-DD') },
+                        { label: 'Нөгөөдөр', value: dayjs().add(2, 'day').format('YYYY-MM-DD') },
+                      ].map((option) => (
+                        <button
+                          key={option.label}
+                          type="button"
+                          onClick={() => setDate(option.value)}
+                          disabled={isPending}
+                          className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                            date === option.value
+                              ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div>
-                    <Label>
-                      Маршрут <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      className="w-full mt-1"
-                      placeholder={
-                        isLoadingRoutes ? 'Ачаалж байна...' : 'Маршрут сонгох'
-                      }
-                      value={routeId || undefined}
-                      onChange={setRouteId}
-                      disabled={isPending || isLoadingRoutes}
-                      options={routes.map((route) => ({
-                        value: route.id,
-                        label: `${route.routeCode}`,
-                      }))}
-                    />
-                  </div>
-
                   <div>
                     <Label>
                       Техник <span className="text-red-500">*</span>
@@ -448,12 +447,22 @@ export default function DailyPlanFormSidebar({
                               stockpile.type;
                             return {
                               value: stockpile.id,
-                              text: `${typeLabel} - ${stockpile.layerNumber}`,
+                              text: stockpile.routeCode
+                                ? `${typeLabel} - ${stockpile.layerNumber} · ${stockpile.routeCode}`
+                                : `${typeLabel} - ${stockpile.layerNumber}`,
                               selected: false,
                             };
                           }) ?? []
                         }
                       />
+                      {stockpileIds.length > 0 && (
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          Маршрут (овоолгоос автоматаар):{' '}
+                          <span className="font-mono font-medium text-gray-800 dark:text-gray-200">
+                            {derivedRouteCode ?? 'овоолгод маршрут холбоогүй'}
+                          </span>
+                        </p>
+                      )}
                     </div>
                   </div>
 
