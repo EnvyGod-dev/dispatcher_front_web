@@ -24,6 +24,9 @@ type MonthlyStatsProps = {
   monthlyTotals: MonthlyAggregationResponse['monthlyTotals'];
   monthlyPlan?: MonthlyPlan;
   summary: MonthlyAggregationSummary;
+  /** Ээлжээр: төлөвлөгөөтэй ээлжүүдийн биелсэн/биелээгүй тоо. */
+  shiftsMetPlan: number;
+  shiftsMissedPlan: number;
 };
 
 const fmt = (n: number) => n.toLocaleString();
@@ -128,6 +131,8 @@ export default function MonthlyStatsCard({
   monthlyTotals,
   monthlyPlan,
   summary,
+  shiftsMetPlan,
+  shiftsMissedPlan,
 }: MonthlyStatsProps) {
   const monthlyPlanCoal = Number(monthlyPlan?.coalAmount) || 0;
   const monthlyPlanSoil = Number(monthlyPlan?.soilAmount) || 0;
@@ -147,8 +152,8 @@ export default function MonthlyStatsCard({
       ? monthlyTotals.totalProduction / cumulativePlanToDate
       : 0;
 
-  const totalDays = summary.daysMetPlan + summary.daysMissedPlan;
-  const metPct = totalDays > 0 ? summary.daysMetPlan / totalDays : 0;
+  const totalShifts = shiftsMetPlan + shiftsMissedPlan;
+  const metPct = totalShifts > 0 ? shiftsMetPlan / totalShifts : 0;
   const coalPct = monthlyPlanTotal > 0 ? monthlyPlanCoal / monthlyPlanTotal : 0;
 
   return (
@@ -214,7 +219,7 @@ export default function MonthlyStatsCard({
           <div className="flex items-center gap-1.5 mb-4">
             <BarChart3 className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
             <span className="text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-200">
-              Өдөр тутмын биелэлт
+              Ээлж тутмын биелэлт
             </span>
           </div>
           <div className="space-y-2">
@@ -224,9 +229,9 @@ export default function MonthlyStatsCard({
                 Төлөвлөгөө биелсэн
               </span>
               <span className="text-sm font-bold tabular-nums text-green-600 dark:text-green-400">
-                {summary.daysMetPlan}
+                {shiftsMetPlan}
                 <span className="ml-1 text-sm font-normal text-gray-400">
-                  өдөр
+                  ээлж
                 </span>
               </span>
             </div>
@@ -236,14 +241,14 @@ export default function MonthlyStatsCard({
                 Төлөвлөгөө биелээгүй
               </span>
               <span className="text-sm font-bold tabular-nums text-red-500 dark:text-red-400">
-                {summary.daysMissedPlan}
+                {shiftsMissedPlan}
                 <span className="ml-1 text-sm font-normal text-gray-400">
-                  өдөр
+                  ээлж
                 </span>
               </span>
             </div>
           </div>
-          {totalDays > 0 && (
+          {totalShifts > 0 && (
             <div className="mt-2.5">
               <div className="flex h-2 rounded-full overflow-hidden bg-red-100 dark:bg-red-950/40">
                 <div
@@ -253,7 +258,7 @@ export default function MonthlyStatsCard({
               </div>
               <div className="flex justify-between mt-1.5 text-[10px] text-gray-400">
                 <span>{(metPct * 100).toFixed(0)}% биелсэн</span>
-                <span>нийт {totalDays} өдөр</span>
+                <span>нийт {totalShifts} ээлж</span>
               </div>
             </div>
           )}
