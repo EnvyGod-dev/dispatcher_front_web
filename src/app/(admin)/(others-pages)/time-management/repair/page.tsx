@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
+import { exportShiftLogs } from '@/lib/export/shift-logs';
+import { useExcelExport } from '@/lib/export/use-excel-export';
 import Pagination from '@/components/tables/Pagination';
 import Button from '@/components/ui/button/Button';
 
@@ -212,6 +214,14 @@ export default function RepairPage() {
                 }),
     });
 
+    const { isExporting, exportNow } = useExcelExport(() =>
+        exportShiftLogs({
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            focus: 'repair',
+        })
+    );
+
     const logs =
         data?.data ?? [];
 
@@ -381,6 +391,8 @@ export default function RepairPage() {
         <>
             <PageBreadcrumb
                 pageTitle="Засварын хэлтэс"
+                onExport={exportNow}
+                isExporting={isExporting}
             />
 
             <div className="space-y-5">

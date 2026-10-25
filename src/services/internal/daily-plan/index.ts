@@ -38,6 +38,42 @@ const dailyPlanService = {
     } as DailyPlanResponse;
   },
 
+  /** Вебийн жагсаалт: эхлэх–дуусах огноогоор (mobile-ийн endpoint-оос тусдаа). */
+  getDailyPlansRange: async ({
+    offset,
+    limit,
+    startDate,
+    endDate,
+    shiftType,
+    status,
+  }: {
+    offset?: number;
+    limit?: number;
+    startDate: string;
+    endDate: string;
+    shiftType?: ShiftType;
+    status?: DailyPlanStatus;
+  }) => {
+    const response = await http.get<DailyPlan[]>(
+      '/api/internal/daily-plans/range',
+      {
+        params: {
+          offset: offset === undefined ? undefined : String(offset),
+          limit: limit === undefined ? undefined : String(limit),
+          startDate,
+          endDate,
+          shiftType,
+          status,
+        },
+      }
+    );
+
+    return {
+      data: response.body,
+      totalCount: parseInt(response.headers?.get('x-total-count') || '0', 10),
+    } as DailyPlanResponse;
+  },
+
   getDailyPlansForAllShifts: async ({
     offset,
     limit,

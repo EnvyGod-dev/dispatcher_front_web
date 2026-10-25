@@ -504,10 +504,13 @@ export default function EmployeePage() {
     return baseColumns;
   }, [selectedEmployeeIds, user?.role]);
 
+  // Устгах эрх зөвхөн админд (хүний нөөц засах боломжтой ч устгахгүй).
+  const canDelete = user?.role === 'admin' || user?.role === 'superadmin';
+
   const actions = actionRole
     ? [
       TableActions.edit<Employee>(handleEdit),
-      TableActions.delete<Employee>(handleDelete),
+      ...(canDelete ? [TableActions.delete<Employee>(handleDelete)] : []),
     ]
     : [];
 
@@ -515,24 +518,20 @@ export default function EmployeePage() {
     <div>
       <PageBreadcrumb
         pageTitle="Хүний нөөц бүртгэл"
+        onExport={() => {
+          if (filteredEmployees.length === 0) {
+            toast.error('Татах ажилтан алга');
+            return;
+          }
+          exportEmployees(filteredEmployees);
+        }}
         actions={[
-          {
-            label: 'Excel татах',
-            variant: 'secondary' as const,
-            icon: <FileSpreadsheet className="h-4 w-4" />,
-            onClick: () => {
-              if (filteredEmployees.length === 0) {
-                toast.error('Татах ажилтан алга');
-                return;
-              }
-              exportEmployees(filteredEmployees);
-            },
-          },
           ...(actionRole
             ? [
                 {
                   label: 'Excel загвар',
                   variant: 'secondary' as const,
+                  icon: <FileSpreadsheet className="h-4 w-4" />,
                   onClick: downloadEmployeeTemplate,
                 },
                 {

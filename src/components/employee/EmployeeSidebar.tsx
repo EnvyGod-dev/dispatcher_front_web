@@ -416,7 +416,7 @@ export default function EmployeeSidebar({
         role: submitRole,
         imageUrl: imageUrl ? imageUrl.trim() : undefined,
         organizationId: user?.organizationId ?? undefined,
-        position: position || undefined,
+        position: position?.trim() || undefined,
         department: department.trim() || undefined,
         registerNumber: registerNumber.trim() || undefined,
         driverLicenseExpiryDate: normalizeDate(driverLicenseExpiryDate),
@@ -842,6 +842,15 @@ export default function EmployeeSidebar({
                     onSubmit={handleSubmit}
                     className="flex-1 overflow-y-auto px-6 py-6 space-y-6"
                   >
+                    {/* Зураг формын дээд талд */}
+                    <GenericDropzoneComponent
+                      title="Хэрэглэгчийн зураг"
+                      onUpload={handleImageUpload}
+                      initialUrl={imageUrl ?? undefined}
+                      uploadFunction={employeeService.uploadUserImage}
+                      disabled={isPending}
+                      showPreview={true}
+                    />
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
                         <Label>
@@ -935,19 +944,20 @@ export default function EmployeeSidebar({
 
                       <div>
                         <Label>Албан тушаал</Label>
-                        <Select
-                          allowCreate={true}
-                          createLabel={(input) => `Нэмэх "${input}"`}
-                          className="w-full mt-1"
-                          placeholder="Албан тушаал сонгох эсвэл шинээр бичих"
-                          value={position || undefined}
-                          onChange={(value) => setPosition(value)}
+                        {/* Жагсаалтаас сонгох эсвэл байхгүй албан тушаалыг шууд бичнэ — бичсэн утга хадгалагдана. */}
+                        <Input
+                          className="mt-1"
+                          list="employee-position-options"
+                          placeholder="Сонгох эсвэл шинээр бичих"
+                          value={position ?? ''}
+                          onChange={(e) => setPosition(e.target.value || null)}
                           disabled={isPending}
-                          options={EmployeePositionMapMn.map((p) => ({
-                            value: p,
-                            label: p,
-                          }))}
                         />
+                        <datalist id="employee-position-options">
+                          {EmployeePositionMapMn.map((p) => (
+                            <option key={p} value={p} />
+                          ))}
+                        </datalist>
                       </div>
 
                       <div>
@@ -1062,14 +1072,6 @@ export default function EmployeeSidebar({
                       </div>
                     )}
 
-                    <GenericDropzoneComponent
-                      title="Хэрэглэгчийн зураг"
-                      onUpload={handleImageUpload}
-                      initialUrl={imageUrl ?? undefined}
-                      uploadFunction={employeeService.uploadUserImage}
-                      disabled={isPending}
-                      showPreview={true}
-                    />
                   </form>
                 )}
 

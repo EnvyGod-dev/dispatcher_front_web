@@ -121,6 +121,9 @@ export interface ShiftReportResponse {
 
 export interface ShiftInspectionReportFilters {
   operationalDate?: string;
+  /** Олон өдрөөр харах: ажлын өдрийн муж. */
+  startDate?: string;
+  endDate?: string;
   shiftType?: "day" | "night";
   driverId?: string;
   vehicleId?: string;

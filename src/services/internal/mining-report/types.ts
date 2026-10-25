@@ -105,6 +105,12 @@ export interface MiningTruckRow extends MiningMetrics {
   owner: string | null;
 }
 
+export interface MiningHourRow {
+  hour: number;
+  day: number;
+  night: number;
+}
+
 export interface MiningOperatorRow extends MiningMetrics {
   driverId: string;
   name: string;
@@ -151,6 +157,10 @@ export interface MiningReport {
   days: MiningDayRow[];
   excavators: MiningExcavatorRow[];
   trucks: MiningTruckRow[];
+  /** Туслах техник (рейсгүй): бульдозер, грейдер, ачигч гэх мэт. Хуучин backend-д байхгүй. */
+  supportVehicles?: MiningTruckRow[];
+  /** Цаг тутмын рейс (УБ цаг 0–23), өдөр/шөнийн ээлжээр. Хуучин backend-д байхгүй. */
+  hourly?: MiningHourRow[];
   operators: MiningOperatorRow[];
   destinations: { type: string; layer: string | null; trips: number; m3: number }[];
   blocks: { name: string; layer: string | null; trips: number; m3: number }[];

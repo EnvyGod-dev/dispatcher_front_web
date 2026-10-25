@@ -1,4 +1,5 @@
 import React from "react";
+import { FileSpreadsheet, Loader2 } from "lucide-react";
 
 interface ActionButton {
   label: string;
@@ -12,14 +13,37 @@ interface PageBreadcrumbProps {
   description?: string;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   actions?: ActionButton | ActionButton[];
+  /** Өгвөл "Excel татах" товч нэмэгдэнэ. */
+  onExport?: () => void;
+  isExporting?: boolean;
 }
 
 const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({ 
   pageTitle, 
   description,
-  actions 
+  actions,
+  onExport,
+  isExporting = false,
 }) => {
-  const actionArray = actions ? (Array.isArray(actions) ? actions : [actions]) : [];
+  const actionArray: ActionButton[] = [
+    ...(onExport
+      ? [
+          {
+            label: isExporting ? "Татаж байна..." : "Excel татах",
+            onClick: () => {
+              if (!isExporting) onExport();
+            },
+            variant: "secondary" as const,
+            icon: isExporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            ),
+          },
+        ]
+      : []),
+    ...(actions ? (Array.isArray(actions) ? actions : [actions]) : []),
+  ];
   
   const getButtonClasses = (variant: ActionButton['variant'] = 'primary') => {
     const baseClasses = "flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-all duration-200";
@@ -57,7 +81,7 @@ const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
 
         {/* Right Section - Action Buttons */}
         {actionArray.length > 0 && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {actionArray.map((action, index) => (
               <button
                 key={index}

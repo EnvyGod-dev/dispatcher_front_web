@@ -1,7 +1,5 @@
 'use client';
 
-import Input from '@/components/form/input/InputField';
-import Label from '@/components/form/Label';
 import Button from '@/components/ui/button/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -19,7 +17,7 @@ import monthlyAggregationService, {
 } from '@/services/internal/shift-report/monthly-aggregation';
 import markshaderReportService from '@/services/internal/markshader-report';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Eye, TrendingUp } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Eye, TrendingUp } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useMemo, useRef, useState } from 'react';
 import PageBreadcrumb from '../common/PageBreadCrumb';
@@ -37,9 +35,6 @@ export default function MonthlyAggregation() {
     month: currentMonth,
   });
 
-  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
-  const [dialogYear, setDialogYear] = useState(filters.year);
-  const [dialogMonth, setDialogMonth] = useState(filters.month);
 
   const queryClient = useQueryClient();
   const [commentModal, setCommentModal] = useState<{
@@ -207,6 +202,23 @@ export default function MonthlyAggregation() {
 
   const shiftSeries = data?.body?.shiftSeries || [];
 
+  // Төлөвлөгөөтэй ээлж бүрийг тус тусад нь (өдөр, шөнө) биелсэн эсэхээр тоолно.
+  const shiftPlanStats = shiftSeries.reduce(
+    (acc, item) => {
+      const planned = Number(item.plannedAmount) || 0;
+      if (planned <= 0) return acc;
+      if (Number(item.production) >= planned) acc.met += 1;
+      else acc.missed += 1;
+      return acc;
+    },
+    { met: 0, missed: 0 },
+  );
+
+  const shiftMonth = (delta: number) => {
+    const next = new Date(filters.year, filters.month - 1 + delta, 1);
+    setFilters({ year: next.getFullYear(), month: next.getMonth() + 1 });
+  };
+
   const chartOptions: ApexOptions = useMemo(
     () => ({
       chart: {
@@ -300,22 +312,53 @@ export default function MonthlyAggregation() {
 
   return (
     <div className="space-y-5">
-      <PageBreadcrumb
-        pageTitle={`${filters.year} оны ${filters.month} сарын нэгтгэл`}
-        description={`Нийт ${data?.body.dailyBreakdown.length ?? '0'} өдрийн мэдээлэл`}
-        actions={{
-          label: 'Огноо солих',
-          onClick: () => setIsFilterDialogOpen(true),
-          variant: 'primary',
-          icon: <Calendar className="h-4 w-4" />,
-        }}
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageBreadcrumb
+          pageTitle={`${filters.year} оны ${filters.month} сарын нэгтгэл`}
+          description={`Нийт ${data?.body.dailyBreakdown.length ?? '0'} өдрийн мэдээлэл`}
+        />
+        {/* Сар солих: бичиж оруулж болно, гар утсанд системийн сонгогч нээгдэнэ. */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => shiftMonth(-1)}
+            disabled={isLoading}
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            aria-label="Өмнөх сар"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="relative">
+            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="month"
+              value={`${filters.year}-${String(filters.month).padStart(2, '0')}`}
+              onChange={(e) => {
+                const [year, month] = e.target.value.split('-').map(Number);
+                if (year && month) setFilters({ year, month });
+              }}
+              className="h-10 rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-800 outline-none focus:border-brand-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => shiftMonth(1)}
+            disabled={isLoading}
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            aria-label="Дараах сар"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
       {data?.body && (
         <MonthlyStatsCard
           monthlyTotals={data.body.monthlyTotals}
           monthlyPlan={data.body.monthlyPlan}
           summary={data.body.summary}
+          shiftsMetPlan={shiftPlanStats.met}
+          shiftsMissedPlan={shiftPlanStats.missed}
         />
       )}
 
@@ -717,63 +760,6 @@ export default function MonthlyAggregation() {
         </DialogContent>
       </Dialog>
 
-      {/* Filter modal */}
-      <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Сар / Жил сонгох</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="filter-year">Жил</Label>
-              <Input
-                id="filter-year"
-                type="number"
-                value={dialogYear}
-                onChange={(e) => setDialogYear(parseInt(e.target.value) || currentYear)}
-                placeholder="Жил"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="filter-month">Сар</Label>
-              <Input
-                id="filter-month"
-                type="number"
-                min="1"
-                max="12"
-                value={dialogMonth}
-                onChange={(e) => setDialogMonth(parseInt(e.target.value) || currentMonth)}
-                placeholder="Сар (1-12)"
-                className="mt-1"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDialogYear(currentYear);
-                setDialogMonth(currentMonth);
-                setFilters({ year: currentYear, month: currentMonth });
-                setIsFilterDialogOpen(false);
-              }}
-              disabled={isLoading}
-            >
-              Цэвэрлэх
-            </Button>
-            <Button
-              onClick={() => {
-                setFilters({ year: dialogYear, month: dialogMonth });
-                setIsFilterDialogOpen(false);
-              }}
-              disabled={isLoading}
-            >
-              Хайх
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -29,6 +29,8 @@ import Button from '../ui/button/Button';
 import Input from '../form/input/InputField';
 import { ChevronDown, ChevronUp, Filter, X } from 'lucide-react';
 import ColumnSettings, { ColumnOption } from './ColumnSettings';
+import { exportExcel } from '@/lib/fuel/export';
+import { fetchAllPages } from '@/lib/export/fetch-all';
 
 const STORAGE_KEY = 'vehicles_visible_columns';
 
@@ -126,6 +128,61 @@ export default function VehiclesPage() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(visibleColumns));
     }
   }, [visibleColumns]);
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Одоогийн шүүлтүүрээр бүх техникийг Excel рүү.
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const rows = await fetchAllPages<Vehicle>((offset, limit) =>
+        vehicleService.getVehicles({
+          offset,
+          limit,
+          name: filterName || undefined,
+          code: filterCode || undefined,
+          vehicleNumber: filterVehicleNumber || undefined,
+          type: filterType,
+          status: filterStatus,
+          vehicleOrganizationId: filterVehicleOrganizationId,
+          sortColumn,
+          sortOrder,
+        }),
+      );
+      if (rows.length === 0) {
+        toast.error('Татах техник алга');
+        return;
+      }
+      exportExcel('tekhnik', [
+        {
+          name: 'Техник',
+          rows,
+          columns: [
+            { header: 'Код', value: (v: Vehicle) => v.code, width: 12 },
+            { header: 'Нэр', value: (v: Vehicle) => v.name, width: 20 },
+            { header: 'Төрөл', value: (v: Vehicle) => vehicleTypeLabels[v.type] ?? v.type, width: 16 },
+            { header: 'Улсын дугаар', value: (v: Vehicle) => v.vehicleNumber, width: 14 },
+            { header: 'Уурхайн дугаар', value: (v: Vehicle) => v.mineNumber, width: 14 },
+            { header: 'Арлын дугаар', value: (v: Vehicle) => v.serialNumber, width: 18 },
+            { header: 'Хөдөлгүүрийн дугаар', value: (v: Vehicle) => v.engineNumber, width: 18 },
+            { header: 'Эзэмшигч', value: (v: Vehicle) => v.vehicleOrganization?.name ?? v.vehicleOrganizationName ?? '', width: 18 },
+            { header: 'Хэсэг', value: (v: Vehicle) => v.miningSection?.name ?? v.miningSectionName ?? '', width: 14 },
+            { header: 'Төлөв', value: (v: Vehicle) => vehicleStatusLabels[v.status] ?? v.status, width: 12 },
+            { header: 'Ашиглалтад орсон', value: (v: Vehicle) => v.commissioningDate?.slice(0, 10) ?? '', width: 14 },
+            { header: 'Даатгал дуусах', value: (v: Vehicle) => v.insuranceExpiryDate?.slice(0, 10) ?? '', width: 14 },
+            { header: 'Нүүрсний коэф.', value: (v: Vehicle) => Number(v.coalCoefficient) || null, width: 12 },
+            { header: 'Хөрсний коэф.', value: (v: Vehicle) => Number(v.soilCoefficient) || null, width: 12 },
+            { header: 'Түлш л/цаг', value: (v: Vehicle) => v.fuelConsumptionPerHour ?? null, width: 11 },
+            { header: 'GPS', value: (v: Vehicle) => (v.hasGps ? 'Тийм' : 'Үгүй'), width: 8 },
+          ],
+        },
+      ]);
+    } catch (error) {
+      toast.error((error as Error)?.message || 'Excel татахад алдаа гарлаа');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: [
@@ -381,6 +438,8 @@ export default function VehiclesPage() {
     <div>
       <PageBreadcrumb
         pageTitle="Техник бүртгэл"
+        onExport={handleExport}
+        isExporting={isExporting}
         actions={{
           label: 'Нэмэх',
           onClick: () => setIsSidebarOpen(true),

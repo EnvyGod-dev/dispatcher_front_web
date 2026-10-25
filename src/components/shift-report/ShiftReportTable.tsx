@@ -74,7 +74,8 @@ export default function ShiftReportTable() {
   const [filters, setFilters] = useState<ShiftReportFilters>({});
   const [inspectionFilters, setInspectionFilters] =
     useState<ShiftInspectionReportFilters>({
-      operationalDate: getUbDateOnlyString(),
+      startDate: getUbDateOnlyString(),
+      endDate: getUbDateOnlyString(),
       shiftType: undefined,
       inspectionState: 'all',
     });

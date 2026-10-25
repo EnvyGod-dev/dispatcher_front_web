@@ -17,7 +17,8 @@ import { toast } from 'sonner';
 
 import { useAuth } from '@/components/AuthProvider';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
-import DatePicker from '@/components/form/date-picker';
+import { DateRangeFilter } from '@/components/fuel/ui';
+import type { DateRange } from '@/lib/fuel/format';
 import Select from '@/components/form/Select';
 import DynamicTable from '@/components/tables/DynamicTable';
 import Pagination from '@/components/tables/Pagination';
@@ -34,6 +35,10 @@ import { dailyPlanActionRoles, hasRole } from '@/services/roles';
 import DailyPlanFormSidebar from './Sidebar';
 import StockpileLabel from '@/components/stockpile/StockpileTag';
 import ShiftTypeBadge from '@/components/shift-report/ShiftType';
+import { exportExcel } from '@/lib/fuel/export';
+import { fetchAllPages } from '@/lib/export/fetch-all';
+import { useExcelExport } from '@/lib/export/use-excel-export';
+import { stockpileTypeMap } from '@/services/internal/stockpile/types';
 
 type ApiError = Error & { status?: number };
 
@@ -49,9 +54,10 @@ export default function DailyPlansPage() {
   const [reactivationWarningPlan, setReactivationWarningPlan] = useState<
     DailyPlan | undefined
   >();
-  const [selectedDate, setSelectedDate] = useState<string>(
-    dayjs().format('YYYY-MM-DD'),
-  );
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const today = dayjs().format('YYYY-MM-DD');
+    return { from: today, to: today };
+  });
   const [selectedShiftType, setSelectedShiftType] = useState<
     ShiftType | undefined
   >(undefined);
@@ -59,16 +65,57 @@ export default function DailyPlansPage() {
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: [
       'daily-plans',
-      { offset, limit, date: selectedDate, shiftType: selectedShiftType },
+      { offset, limit, ...dateRange, shiftType: selectedShiftType },
     ],
     queryFn: () =>
-      dailyPlanService.getDailyPlans({
+      dailyPlanService.getDailyPlansRange({
         offset,
         limit,
-        date: selectedDate,
+        startDate: dateRange.from,
+        endDate: dateRange.to,
         shiftType: selectedShiftType,
       }),
     enabled: !!user,
+  });
+
+  const { isExporting, exportNow } = useExcelExport(async () => {
+    const rows = await fetchAllPages<DailyPlan>((offset, limit) =>
+      dailyPlanService.getDailyPlansRange({
+        offset,
+        limit,
+        startDate: dateRange.from,
+        endDate: dateRange.to,
+        shiftType: selectedShiftType,
+      }),
+    );
+    const stockpileText = (plan: DailyPlan) =>
+      (plan.stockpiles ?? [])
+        .map((sp) =>
+          [stockpileTypeMap.find((t) => t.value === sp.type)?.label ?? sp.type, sp.layerNumber]
+            .filter(Boolean)
+            .join(' - '),
+        )
+        .join(', ');
+    if (rows.length) {
+      exportExcel(`odriin-tolovlolt_${dateRange.from}_${dateRange.to}`, [
+        {
+          name: 'Өдрийн төлөвлөлт',
+          rows,
+          columns: [
+            { header: 'Огноо', value: (p: DailyPlan) => p.date, width: 12 },
+            { header: 'Ээлж', value: (p: DailyPlan) => (p.shiftType === 'night' ? 'Шөнө' : 'Өдөр'), width: 8 },
+            { header: 'Төлөв', value: (p: DailyPlan) => (p.status === 'completed' ? 'Дууссан' : 'Идэвхтэй'), width: 10 },
+            { header: 'Техник', value: (p: DailyPlan) => p.vehicleCode ?? '', width: 12 },
+            { header: 'Маршрут', value: (p: DailyPlan) => p.routeCode ?? '', width: 12 },
+            { header: 'Ачих блок', value: (p: DailyPlan) => p.miningBlockName ?? '', width: 14 },
+            { header: 'Талын зай', value: (p: DailyPlan) => p.miningBlockLayerNumber ?? '', width: 10 },
+            { header: 'Овоолго', value: stockpileText, width: 28 },
+            { header: 'Төлөвлөгөөт хэмжээ м³', value: (p: DailyPlan) => (p.transportAmount ? Number(p.transportAmount) : null), width: 16 },
+          ],
+        },
+      ]);
+    }
+    return rows.length;
   });
 
   const deleteMutation = useMutation({
@@ -314,6 +361,8 @@ export default function DailyPlansPage() {
       <PageBreadcrumb
         pageTitle="Өдрийн төлөвлөлт"
         description="Диспетчерийн үүсгэсэн өдрийн төлөвлөлт"
+        onExport={exportNow}
+        isExporting={isExporting}
         actions={
           hasRole(user.role, dailyPlanActionRoles)
             ? {
@@ -341,21 +390,17 @@ export default function DailyPlansPage() {
       />
 
       {/* filters section */}
-      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-600 dark:bg-gray-900">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-600 dark:bg-gray-900">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2">
             <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Огноо:
             </label>
-            <DatePicker
-              id="daily-plan-date-picker"
-              placeholder="Огноо сонгох"
-              mode="single"
-              onChange={(currentDateString) => {
-                setSelectedDate(
-                  dayjs(currentDateString[0]).format('YYYY-MM-DD'),
-                );
+            <DateRangeFilter
+              value={dateRange}
+              onChange={(range) => {
+                setDateRange(range);
                 paginate(1, limit);
               }}
             />

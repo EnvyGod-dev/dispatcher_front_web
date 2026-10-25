@@ -3,7 +3,6 @@
 import Label from '@/components/form/Label';
 import MultiSelect from '@/components/form/MultiSelect';
 import Select from '@/components/form/Select';
-import DatePicker from '@/components/form/date-picker';
 import Input from '@/components/form/input/InputField';
 import Button from '@/components/ui/button/Button';
 import dailyPlanService from '@/services/internal/daily-plan';
@@ -94,7 +93,7 @@ export default function DailyPlanFormSidebar({
   const [transportAmount, setTransportAmount] = useState('');
   const [vehicleId, setVehicleId] = useState('');
   const [shiftType, setShiftType] = useState<ShiftType>('day');
-  const [date, setDate] = useState<string>('');
+  const [date, setDate] = useState<string>(() => dayjs().format('YYYY-MM-DD'));
 
   const isEditMode = !!editingPlan;
 
@@ -199,11 +198,11 @@ export default function DailyPlanFormSidebar({
     setTransportAmount('');
     setVehicleId('');
     setShiftType('day');
-    setDate('');
+    setDate(dayjs().format('YYYY-MM-DD'));
   };
 
   const handleSubmit = async () => {
-    if (!routeId || !pickUpBlockId || stockpileIds.length === 0) {
+    if (!date || !routeId || !pickUpBlockId || stockpileIds.length === 0) {
       toast.error('Бүх талбарыг бөглөнө үү');
       return;
     }
@@ -320,15 +319,13 @@ export default function DailyPlanFormSidebar({
                     <Label>
                       Өдөр <span className="text-red-500">*</span>
                     </Label>
-                    <DatePicker
-                      id="plan-date-picker"
-                      placeholder="Огноо"
-                      mode="single"
-                      onChange={(dates) => {
-                        setDate(
-                          dates?.[0] ? dayjs(dates[0]).format('YYYY-MM-DD') : ''
-                        );
-                      }}
+                    {/* Native огноо: бичиж оруулж болно, гар утсанд системийн сонгогч нээгдэнэ. */}
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      disabled={isPending}
+                      className="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-none focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90"
                     />
                   </div>
                   <div>
