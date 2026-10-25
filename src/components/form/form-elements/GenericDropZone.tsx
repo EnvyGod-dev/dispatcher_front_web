@@ -115,13 +115,14 @@ const GenericDropzoneComponent: React.FC<GenericDropzoneComponentProps> = ({
         <input {...getInputProps()} />
         
         {uploadedUrl && showPreview ? (
-          <div className="relative w-full max-w-xs">
+          <div className="relative w-full max-w-sm">
+            {/* Зургийг тайрахгүй, бүтнээр нь харуулна (босоо хөрөг зураг ч бүтэн харагдана). */}
             <Image
               src={uploadedUrl}
               alt="Uploaded file"
-              className="rounded-lg object-cover w-full h-32"
-              width={300}
-              height={128}
+              className="mx-auto h-72 w-full rounded-lg object-contain"
+              width={384}
+              height={288}
               onError={(e) => {
                 console.error('Image load error:', e);
                 setUploadedUrl("");
