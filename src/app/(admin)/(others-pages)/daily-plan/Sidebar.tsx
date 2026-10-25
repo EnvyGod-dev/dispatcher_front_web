@@ -25,6 +25,7 @@ import {
 } from '@headlessui/react';
 import dayjs from 'dayjs';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { stockpileTypeMap } from '@/services/internal/stockpile/types';
@@ -97,7 +98,7 @@ export default function DailyPlanFormSidebar({
 
   const isEditMode = !!editingPlan;
 
-  const { data: routesData } = useQuery({
+  const { data: routesData, isLoading: isLoadingRoutes } = useQuery({
     queryKey: ['routes', 'daily-plan', 'all'],
     enabled: isOpen,
     queryFn: () =>
@@ -106,7 +107,7 @@ export default function DailyPlanFormSidebar({
       ),
   });
 
-  const { data: blastBlocksData } = useQuery({
+  const { data: blastBlocksData, isLoading: isLoadingBlocks } = useQuery({
     queryKey: ['mining-blocks', 'pick_up', 'daily-plan', 'all'],
     enabled: isOpen,
     queryFn: () =>
@@ -115,7 +116,7 @@ export default function DailyPlanFormSidebar({
       ),
   });
 
-  const { data: stockpilesData } = useQuery({
+  const { data: stockpilesData, isLoading: isLoadingStockpiles } = useQuery({
     queryKey: ['stockpiles', 'daily-plan', 'all'],
     enabled: isOpen,
     queryFn: () =>
@@ -124,7 +125,7 @@ export default function DailyPlanFormSidebar({
       ),
   });
 
-  const { data: vehiclesData } = useQuery({
+  const { data: vehiclesData, isLoading: isLoadingVehicles } = useQuery({
     queryKey: ['vehicles', 'excavator', 'daily-plan', 'all'],
     enabled: isOpen,
     queryFn: () =>
@@ -136,6 +137,13 @@ export default function DailyPlanFormSidebar({
         }),
       ),
   });
+
+  const isLoadingOptions =
+    isOpen &&
+    (isLoadingRoutes ||
+      isLoadingBlocks ||
+      isLoadingStockpiles ||
+      isLoadingVehicles);
 
   const routes = routesData?.data || [];
 
@@ -300,8 +308,14 @@ export default function DailyPlanFormSidebar({
 
                 <form
                   onSubmit={handleSubmit}
-                  className="flex-1 overflow-y-auto px-6 py-6 space-y-6"
+                  className="relative flex-1 overflow-y-auto px-6 py-6 space-y-6"
                 >
+                  {isLoadingOptions && (
+                    <div className="flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-300">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Сонголтуудыг ачаалж байна...
+                    </div>
+                  )}
                   <div>
                     <Label>
                       Өдөр <span className="text-red-500">*</span>
@@ -323,10 +337,12 @@ export default function DailyPlanFormSidebar({
                     </Label>
                     <Select
                       className="w-full mt-1"
-                      placeholder="Маршрут сонгох"
+                      placeholder={
+                        isLoadingRoutes ? 'Ачаалж байна...' : 'Маршрут сонгох'
+                      }
                       value={routeId || undefined}
                       onChange={setRouteId}
-                      disabled={isPending}
+                      disabled={isPending || isLoadingRoutes}
                       options={routes.map((route) => ({
                         value: route.id,
                         label: `${route.routeCode}`,
@@ -340,7 +356,9 @@ export default function DailyPlanFormSidebar({
                     </Label>
                     <Select
                       className="w-full mt-1"
-                      placeholder="Техник"
+                      placeholder={
+                        isLoadingVehicles ? 'Ачаалж байна...' : 'Техник'
+                      }
                       value={vehicleId}
                       onChange={setVehicleId}
                       disabled={!vehicles || editingPlan !== undefined}
@@ -379,10 +397,14 @@ export default function DailyPlanFormSidebar({
                       </Label>
                       <Select
                         className="w-full mt-1"
-                        placeholder="Тэсэлгээний блок сонгох"
+                        placeholder={
+                          isLoadingBlocks
+                            ? 'Ачаалж байна...'
+                            : 'Тэсэлгээний блок сонгох'
+                        }
                         value={pickUpBlockId || undefined}
                         onChange={setPickUpBlockId}
-                        disabled={isPending}
+                        disabled={isPending || isLoadingBlocks}
                         options={
                           blastBlocks?.map((block) => ({
                             value: block.id,
@@ -414,10 +436,14 @@ export default function DailyPlanFormSidebar({
                         <span className="text-red-500">*</span>
                       </Label>
                       <MultiSelect
-                        placeholder="Овоолго сонгох..."
+                        placeholder={
+                          isLoadingStockpiles
+                            ? 'Ачаалж байна...'
+                            : 'Овоолго сонгох...'
+                        }
                         value={stockpileIds}
                         onChange={setStockpileIds}
-                        disabled={isPending}
+                        disabled={isPending || isLoadingStockpiles}
                         options={
                           stockpiles?.map((stockpile) => {
                             const typeLabel =
@@ -462,7 +488,12 @@ export default function DailyPlanFormSidebar({
                       variant="primary"
                       size="sm"
                       onClick={handleSubmit}
-                      disabled={isPending}
+                      disabled={isPending || isLoadingOptions}
+                      startIcon={
+                        isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : undefined
+                      }
                     >
                       {isPending
                         ? 'Түр хүлээнэ үү...'

@@ -4,14 +4,13 @@ import DatePicker from '@/components/form/date-picker';
 import Label from '@/components/form/Label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import vehicleService from '@/services/internal/vehicle';
 import { driverShiftGroupOptions } from '@/services/internal/employee/type';
-import { useQuery } from '@tanstack/react-query';
 import { Save } from 'lucide-react';
 import Select from '@/components/form/Select';
 import TextArea from '@/components/form/input/TextArea';
 import { ShiftStatus } from '@/services/internal/shift/types';
-import { shiftReportKeys } from '../queryKeys';
+import { vehicleTypeLabels } from '@/services/internal/vehicle/types';
+import { useShiftVehicles } from '../hooks/useShiftVehicles';
 
 interface ShiftEditFormProps {
   shiftData: {
@@ -59,29 +58,17 @@ export default function ShiftEditForm({
   canEdit,
   isPending,
 }: ShiftEditFormProps) {
-  const { data: trucksData, isLoading: trucksLoading } = useQuery({
-    queryKey: [...shiftReportKeys.all, 'vehicles', 'truck'],
-    queryFn: () => vehicleService.getShiftVehicles({ type: 'truck' }),
-  });
-
-  const { data: excavatorsData, isLoading: excavatorsLoading } = useQuery({
-    queryKey: [...shiftReportKeys.all, 'vehicles', 'excavator'],
-    queryFn: () => vehicleService.getShiftVehicles({ type: 'excavator' }),
-  });
-
-  const vehiclesLoading = trucksLoading || excavatorsLoading;
-
-  const vehicles = [
-    ...(trucksData?.data || []),
-    ...(excavatorsData?.data || []),
-  ];
+  const { vehicles, isLoading: vehiclesLoading } = useShiftVehicles();
 
   const vehicleOptions = vehicles.map((vehicle) => ({
     value: vehicle.id,
-    label: vehicle.code || vehicle.name,
+    label: [vehicle.code || vehicle.name, vehicleTypeLabels[vehicle.type]]
+      .filter(Boolean)
+      .join(' · '),
     searchText: [
       vehicle.code,
       vehicle.name,
+      vehicleTypeLabels[vehicle.type],
       vehicle.vehicleNumber,
       vehicle.mineNumber,
     ]

@@ -4,7 +4,13 @@ import { useAuth } from '@/components/AuthProvider';
 import Input from '@/components/form/input/InputField';
 import Label from '@/components/form/Label';
 import Button from '@/components/ui/button/Button';
-import employeeService from '@/services/internal/employee';
+import employeeService, {
+  type BulkCreateEmployeesResult,
+} from '@/services/internal/employee';
+import {
+  downloadEmployeeTemplate,
+  prepareEmployeeImport,
+} from '@/lib/employee/excel';
 import {
   DriverShiftGroup,
   driverShiftGroupOptions,
@@ -213,11 +219,8 @@ export default function EmployeeSidebar({
   const [status, setStatus] = useState<UserStatus>('available');
   const [uploadMode, setUploadMode] = useState<'single' | 'bulk'>('single');
   const [bulkFile, setBulkFile] = useState<File | null>(null);
-  const [bulkUploadResult, setBulkUploadResult] = useState<{
-    success: number;
-    failed: number;
-    errors: Array<{ row: number; error: string; data: any }>;
-  } | null>(null);
+  const [bulkUploadResult, setBulkUploadResult] =
+    useState<BulkCreateEmployeesResult | null>(null);
 
   const isEditMode = !!editingEmployee;
 
@@ -320,22 +323,44 @@ export default function EmployeeSidebar({
 
   const { isPending: isBulkUploading, mutateAsync: bulkUploadEmployees } =
     useMutation({
-      mutationFn: employeeService.bulkCreateEmployees,
+      mutationFn: async (file: File): Promise<BulkCreateEmployeesResult> => {
+        // Монгол толгой/үүргийн нэрийг backend-ийн хэлбэрт хөрвүүлж, илт алдаатай мөрийг өмнө нь шүүнэ.
+        const prepared = await prepareEmployeeImport(file);
+        const localErrors = prepared.issues.map((issue) => ({ ...issue }));
+
+        if (prepared.sourceRows.length === 0) {
+          return { success: 0, failed: localErrors.length, errors: localErrors };
+        }
+
+        const result = await employeeService.bulkCreateEmployees(prepared.file);
+
+        return {
+          success: result.success,
+          failed: result.failed + localErrors.length,
+          errors: [
+            ...localErrors,
+            // Backend илгээсэн файлын мөрийг заана → эх файлын мөр рүү буулгана.
+            ...result.errors.map((error) => ({
+              ...error,
+              row: prepared.sourceRows[error.row - 2] ?? error.row,
+            })),
+          ].sort((a, b) => a.row - b.row),
+        };
+      },
       onSuccess: (result) => {
         setBulkUploadResult(result);
 
         if (result.success > 0) {
           toast.success(`${result.success} хэрэглэгч амжилттай бүртгэгдлээ`);
           onSuccess?.();
-          onClose();
         }
 
         if (result.failed > 0) {
-          toast.warning(`${result.failed} хэрэглэгч алдаатай байна`);
-        }
-
-        if (result.errors.length > 0) {
-          toast.warning(`${result.errors[0].error}`);
+          toast.warning(
+            `${result.failed} мөр алдаатай. Доорх жагсаалтаас шалгана уу.`
+          );
+        } else if (result.success > 0) {
+          onClose();
         }
       },
       onError: (error: Error) => {
@@ -352,10 +377,7 @@ export default function EmployeeSidebar({
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', bulkFile);
-
-    await bulkUploadEmployees(formData);
+    await bulkUploadEmployees(bulkFile);
   };
 
   const handleSubmit = async (event?: React.FormEvent<HTMLFormElement>) => {
@@ -541,9 +563,9 @@ export default function EmployeeSidebar({
                             Хэрэглэгчийн мэдээллийг зөв форматаар оруулахын тулд
                             доорх загвар файлыг ашиглана уу.
                           </p>
-                          <a
-                            href="/template_files/user_format.xlsx"
-                            download="hereglegch_zagvar.xlsx"
+                          <button
+                            type="button"
+                            onClick={downloadEmployeeTemplate}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 text-green-700 dark:text-green-300 text-sm font-medium rounded-lg border border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors shadow-sm"
                           >
                             <svg
@@ -560,7 +582,7 @@ export default function EmployeeSidebar({
                               />
                             </svg>
                             <span>Загвар файл татах</span>
-                          </a>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -572,19 +594,19 @@ export default function EmployeeSidebar({
                     <div className="mt-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                       <div className="grid grid-cols-1 gap-3 text-xs">
                         {[
-                          ['role', 'Үүрэг', 'superadmin | admin | markscheider | driver | assistant_operator | dispatcher | hr | ita | mechanic'],
-                          ['phoneNumber', 'Утасны дугаар', 'Дор хаяж 8 оронтой.'],
-                          ['password', 'Нууц үг', 'Заавал.'],
-                          ['firstName', 'Нэр', 'Заавал.'],
-                          ['lastName', 'Овог', 'Заавал.'],
-                          ['email', 'И-мэйл хаяг', 'Заавал биш.'],
-                          ['position', 'Албан тушаал', 'Заавал биш.'],
-                          ['department', 'Хэлтэс', 'Заавал биш.'],
-                          ['registerNumber', 'Регистрийн дугаар', 'Заавал биш.'],
-                          ['driverLicenseExpiryDate', 'МУ жолооны үнэмлэх дуусах огноо', 'YYYY-MM-DD формат.'],
-                          ['ettDriverLicenseExpiryDate', 'ЭТТ үнэмлэх дуусах огноо', 'YYYY-MM-DD формат.'],
-                          ['entryPermitExpiryDate', 'Нэвтрэх үнэмлэх дуусах огноо', 'YYYY-MM-DD формат.'],
-                          ['driverShiftGroup', 'ABCD ээлж', 'A | B | C | D. driver/assistant_operator үед заавал.'],
+                          ['Овог *', 'Овог', 'Заавал.'],
+                          ['Нэр *', 'Нэр', 'Заавал.'],
+                          ['Утас *', 'Утасны дугаар', 'Дор хаяж 8 оронтой.'],
+                          ['Нууц үг *', 'Нууц үг', 'Заавал.'],
+                          ['Үүрэг *', 'Үүрэг', 'Монгол нэрээр (жишээ: Оператор, Механик). Жагсаалт загварын "Заавар" хуудсанд.'],
+                          ['Ээлж (A/B/C/D)', 'ABCD ээлж', 'Оператор, Туслах техник оператор үед заавал.'],
+                          ['Албан тушаал', 'Албан тушаал', 'Заавал биш.'],
+                          ['Хэлтэс', 'Хэлтэс', 'Заавал биш.'],
+                          ['Регистр', 'Регистрийн дугаар', 'Заавал биш.'],
+                          ['Имэйл', 'И-мэйл хаяг', 'Заавал биш.'],
+                          ['Жолооны үнэмлэх дуусах', 'МУ жолооны үнэмлэх', '2027-12-31 хэлбэрээр.'],
+                          ['ЭТТ үнэмлэх дуусах', 'ЭТТ үнэмлэх', '2027-12-31 хэлбэрээр.'],
+                          ['Нэвтрэх зөвшөөрөл дуусах', 'Нэвтрэх үнэмлэх', '2027-12-31 хэлбэрээр.'],
                         ].map(([key, title, description]) => (
                           <div key={key} className="flex items-start gap-2">
                             <span className="bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded text-blue-900 dark:text-blue-100">
@@ -616,11 +638,8 @@ export default function EmployeeSidebar({
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                const validTypes = [
-                                  'application/vnd.ms-excel',
-                                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                ];
-                                if (!validTypes.includes(file.type)) {
+                                // Зарим хөтөч xlsx-д file.type хоосон өгдөг тул өргөтгөлөөр шалгана.
+                                if (!/\.(xlsx|xls)$/i.test(file.name)) {
                                   toast.error('Зөвхөн Excel файл оруулна уу');
                                   return;
                                 }

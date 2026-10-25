@@ -15,16 +15,26 @@ export const uploadBulkFile = async <T>(
       credentials: 'include',
     });
 
-    const result = await response.json();
+    // Body-г нэг л удаа уншина (json() дараа text() дуудахад алдаа гардаг).
+    const text = await response.text();
+    let result: unknown = null;
 
-    if (response.status === 422) {
-      throw new Error(result.error);
+    try {
+      result = text ? JSON.parse(text) : null;
+    } catch {
+      result = null;
     }
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Bulk upload failed:', errorText);
-      throw new Error(`Upload failed: ${response.status} ${errorText}`);
+      const message =
+        (result as { error?: unknown; message?: unknown } | null)?.error ??
+        (result as { message?: unknown } | null)?.message;
+      console.error('Bulk upload failed:', text);
+      throw new Error(
+        typeof message === 'string' && message
+          ? message
+          : `Upload failed: ${response.status}`
+      );
     }
 
     return result as T;

@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import {
   Calendar,
   CheckCheck,
+  Loader2,
   Package,
   Route,
   RotateCcw,
@@ -55,7 +56,7 @@ export default function DailyPlansPage() {
     ShiftType | undefined
   >(undefined);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: [
       'daily-plans',
       { offset, limit, date: selectedDate, shiftType: selectedShiftType },
@@ -399,7 +400,15 @@ export default function DailyPlansPage() {
       </div>
 
       {/* table section */}
-      <div className="space-y-4">
+      <div className="relative space-y-4">
+        {((isFetching && !isLoading) || deleteMutation.isPending) && (
+          <div className="absolute inset-0 z-10 flex items-start justify-center rounded-lg bg-white/60 pt-16 dark:bg-gray-900/60">
+            <div className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm text-gray-700 shadow dark:bg-gray-800 dark:text-gray-200">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Ачаалж байна...
+            </div>
+          </div>
+        )}
         <DynamicTable<DailyPlan>
           data={[dataSource]}
           columns={columns}

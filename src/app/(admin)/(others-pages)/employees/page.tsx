@@ -33,7 +33,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/alert/Alert';
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
-import { FilterX, Search } from 'lucide-react';
+import { FileSpreadsheet, FilterX, Search } from 'lucide-react';
+import { downloadEmployeeTemplate, exportEmployees } from '@/lib/employee/excel';
 
 type DriverShiftGroupFilter = 'A' | 'B' | 'C' | 'D' | undefined;
 
@@ -514,18 +515,37 @@ export default function EmployeePage() {
     <div>
       <PageBreadcrumb
         pageTitle="Хүний нөөц бүртгэл"
-        actions={
-          actionRole
-            ? {
-              label: 'Нэмэх',
-              onClick: () => {
-                setEditingEmployee(undefined);
-                setIsAddSidebarOpen(true);
-              },
-              variant: 'primary',
-            }
-            : undefined
-        }
+        actions={[
+          {
+            label: 'Excel татах',
+            variant: 'secondary' as const,
+            icon: <FileSpreadsheet className="h-4 w-4" />,
+            onClick: () => {
+              if (filteredEmployees.length === 0) {
+                toast.error('Татах ажилтан алга');
+                return;
+              }
+              exportEmployees(filteredEmployees);
+            },
+          },
+          ...(actionRole
+            ? [
+                {
+                  label: 'Excel загвар',
+                  variant: 'secondary' as const,
+                  onClick: downloadEmployeeTemplate,
+                },
+                {
+                  label: 'Нэмэх',
+                  onClick: () => {
+                    setEditingEmployee(undefined);
+                    setIsAddSidebarOpen(true);
+                  },
+                  variant: 'primary' as const,
+                },
+              ]
+            : []),
+        ]}
       />
 
       <div className="space-y-4">
