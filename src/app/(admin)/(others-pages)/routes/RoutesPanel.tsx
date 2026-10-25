@@ -17,7 +17,8 @@ import routeService from '@/services/internal/routes';
 import { Route } from '@/services/internal/routes/types';
 import { hasRole, miningRouteActionRoles } from '@/services/roles';
 import RouteFormSidebar from './Sidebar';
-import DateRangeInputs, { inDateRange, type OptionalDateRange } from '@/components/form/DateRangeInputs';
+import DateRangeInputs, { type OptionalDateRange, type ShiftFilterValue } from '@/components/form/DateRangeInputs';
+import { matchesCreated } from '@/lib/export/date-paged';
 
 /** Маршрутын жагсаалт — овоолгын хуудасны "Маршрут" таб дотор харагдана. */
 export default function RoutesPanel() {
@@ -28,6 +29,7 @@ export default function RoutesPanel() {
   const [deletingRoute, setDeletingRoute] = useState<Route | undefined>();
   const [search, setSearch] = useState('');
   const [dateRange, setDateRange] = useState<OptionalDateRange>({});
+  const [shiftFilter, setShiftFilter] = useState<ShiftFilterValue>('');
 
   // Маршрут цөөхөн тул бүгдийг татаж хайлтыг шууд хийнэ.
   const { data, isLoading, refetch } = useQuery({
@@ -48,7 +50,7 @@ export default function RoutesPanel() {
 
   const routes = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const rows = (data?.data || []).filter((route) => inDateRange(route.createdAt, dateRange));
+    const rows = (data?.data || []).filter((route) => matchesCreated(route.createdAt, dateRange, shiftFilter));
 
     if (!query) return rows;
 
@@ -57,7 +59,7 @@ export default function RoutesPanel() {
         route.routeCode.toLowerCase().includes(query) ||
         (route.description || '').toLowerCase().includes(query),
     );
-  }, [data, search, dateRange]);
+  }, [data, search, dateRange, shiftFilter]);
 
   const canManage = hasRole(user?.role, miningRouteActionRoles);
 
@@ -113,7 +115,12 @@ export default function RoutesPanel() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <DateRangeInputs label="Бүртгэсэн огноо" value={dateRange} onChange={setDateRange} />
+        <DateRangeInputs label="Бүртгэсэн огноо" value={dateRange}
+              shift={shiftFilter}
+              onShiftChange={(value) => {
+                setShiftFilter(value);
+                
+              }} onChange={setDateRange} />
         <span className="text-sm text-gray-500 dark:text-gray-400">
           Нийт{' '}
           <span className="font-semibold text-gray-900 dark:text-white">

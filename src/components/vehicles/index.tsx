@@ -31,7 +31,8 @@ import { ChevronDown, ChevronUp, Filter, X } from 'lucide-react';
 import ColumnSettings, { ColumnOption } from './ColumnSettings';
 import { exportExcel } from '@/lib/fuel/export';
 import { fetchAllPages } from '@/lib/export/fetch-all';
-import DateRangeInputs, { inDateRange, type OptionalDateRange } from '../form/DateRangeInputs';
+import DateRangeInputs, { type OptionalDateRange, type ShiftFilterValue } from '../form/DateRangeInputs';
+import { matchesCreated } from '@/lib/export/date-paged';
 import { fetchPageWithDateFilter } from '@/lib/export/date-paged';
 
 const STORAGE_KEY = 'vehicles_visible_columns';
@@ -99,6 +100,7 @@ export default function VehiclesPage() {
   const [deleteVehicle, setDeleteVehicle] = useState<Vehicle | null>(null);
 
   const [dateRange, setDateRange] = useState<OptionalDateRange>({});
+  const [shiftFilter, setShiftFilter] = useState<ShiftFilterValue>('');
   const [filterName, setFilterName] = useState('');
   const [filterCode, setFilterCode] = useState('');
   const [filterVehicleNumber, setFilterVehicleNumber] = useState('');
@@ -151,7 +153,7 @@ export default function VehiclesPage() {
           sortColumn,
           sortOrder,
         }),
-      ).then((all) => all.filter((v) => inDateRange(v.createdAt, dateRange)));
+      ).then((all) => all.filter((v) => matchesCreated(v.createdAt, dateRange, shiftFilter)));
       if (rows.length === 0) {
         toast.error('Татах техник алга');
         return;
@@ -202,6 +204,7 @@ export default function VehiclesPage() {
         sortColumn,
         sortOrder,
         dateRange,
+        shiftFilter,
       },
     ],
     queryFn: () =>
@@ -209,6 +212,7 @@ export default function VehiclesPage() {
         offset,
         limit,
         range: dateRange,
+        shift: shiftFilter,
         getDate: (v) => v.createdAt,
         fetchPage: (pageOffset, pageLimit) =>
       vehicleService.getVehicles({
@@ -284,6 +288,7 @@ export default function VehiclesPage() {
     setFilterStatus(undefined);
     setFilterVehicleOrganizationId(undefined);
     setDateRange({});
+    setShiftFilter('');
     paginate(1, limit);
   }, [limit, paginate]);
 
@@ -446,7 +451,8 @@ export default function VehiclesPage() {
     filterStatus ||
     filterVehicleOrganizationId ||
     dateRange.from ||
-    dateRange.to;
+    dateRange.to ||
+    shiftFilter;
 
   return (
     <div>
@@ -466,6 +472,11 @@ export default function VehiclesPage() {
         <DateRangeInputs
           label="Бүртгэсэн огноо"
           value={dateRange}
+              shift={shiftFilter}
+              onShiftChange={(value) => {
+                setShiftFilter(value);
+                paginate(1, limit);
+              }}
           onChange={(range) => {
             setDateRange(range);
             paginate(1, limit);

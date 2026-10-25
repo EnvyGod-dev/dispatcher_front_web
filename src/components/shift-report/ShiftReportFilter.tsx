@@ -8,6 +8,7 @@ import { ChevronDown, ChevronUp, Filter, Search, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import DatePicker from '../form/date-picker';
+import DateRangeInputs from '../form/DateRangeInputs';
 import StockpileLabel from '../stockpile/StockpileTag';
 import ColumnSettings from '../vehicles/ColumnSettings';
 import { ColumnOption } from '../vehicles/ColumnSettings';
@@ -211,6 +212,18 @@ export default function ShiftReportFilter({
     onFiltersChange(newFilters);
   };
 
+  // Хугацааг (эхлэх–дуусах) нэг дор солих — тус бүрээр дуудахад өмнөх утгыг дарна.
+  const handleRangeChange = (range: { from?: string; to?: string }) => {
+    const newFilters = {
+      ...localFilters,
+      operationalDate: undefined,
+      startDate: range.from,
+      endDate: range.to,
+    };
+    setLocalFilters(newFilters);
+    onFiltersChange(newFilters);
+  };
+
   const handleClearFilters = () => {
     const emptyFilters: ShiftReportFilterState = {};
     setLocalFilters(emptyFilters);
@@ -335,6 +348,15 @@ export default function ShiftReportFilter({
       </div>
 
       {/* Collapsible Filter Panel */}
+      {/* Хугацаа (хурдан сонголттой) ба ээлж — үргэлж харагдана */}
+      <DateRangeInputs
+        label="Хугацаа"
+        value={{ from: localFilters.startDate, to: localFilters.endDate }}
+        onChange={handleRangeChange}
+        shift={(localFilters.shiftType as '' | 'day' | 'night' | undefined) ?? ''}
+        onShiftChange={(value) => handleFilterChange('shiftType', value)}
+      />
+
       {showFilters && (
         <div className="bg-background rounded-lg border border-border p-6 shadow-sm animate-in slide-in-from-top-2 duration-200">
           <div className="space-y-4">
@@ -475,7 +497,7 @@ export default function ShiftReportFilter({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Ээлжийн огноо
+                  Ээлжийн огноо (нэг өдөр)
                 </label>
                 <DatePicker
                   id="operational-date-picker"
@@ -497,53 +519,6 @@ export default function ShiftReportFilter({
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Эхлэх огноо
-                </label>
-                <DatePicker
-                  id="start-date-picker"
-                  placeholder="Эхлэх Огноо"
-                  mode="single"
-                  defaultDate={
-                    localFilters.startDate
-                      ? new Date(`${localFilters.startDate}T00:00:00`)
-                      : undefined
-                  }
-                  onChange={(currentDateString) =>
-                    handleFilterChange(
-                      'startDate',
-                      currentDateString[0]
-                        ? formatDate(currentDateString[0])
-                        : undefined
-                    )
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Дуусах огноо
-                </label>
-                <DatePicker
-                  id="end-date-picker"
-                  placeholder="Эхлэх Огноо"
-                  mode="single"
-                  defaultDate={
-                    localFilters.endDate
-                      ? new Date(`${localFilters.endDate}T00:00:00`)
-                      : undefined
-                  }
-                  onChange={(currentDateString) =>
-                    handleFilterChange(
-                      'endDate',
-                      currentDateString[0]
-                        ? formatDate(currentDateString[0])
-                        : undefined
-                    )
-                  }
-                />
-              </div>
             </div>
           </div>
         </div>

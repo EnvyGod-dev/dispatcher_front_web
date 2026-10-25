@@ -37,14 +37,16 @@ async function fetchDetails(logs: ShiftLog[]) {
 export async function exportShiftLogs({
   startDate,
   endDate,
+  shiftType,
   focus,
 }: {
   startDate?: string;
   endDate?: string;
+  shiftType?: 'day' | 'night';
   focus: 'idle' | 'repair';
 }) {
   const logs = await fetchAllPages<ShiftLog>((offset, limit) =>
-    equipmentShiftLogService.getLogs({ offset, limit, startDate, endDate }),
+    equipmentShiftLogService.getLogs({ offset, limit, startDate, endDate, shiftType }),
   );
 
   if (!logs.length) return 0;

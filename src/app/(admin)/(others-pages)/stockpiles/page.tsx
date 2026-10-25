@@ -32,7 +32,8 @@ import type { Route } from '@/services/internal/routes/types';
 import { exportExcel } from '@/lib/fuel/export';
 import { fetchAllPages } from '@/lib/export/fetch-all';
 import { useExcelExport } from '@/lib/export/use-excel-export';
-import DateRangeInputs, { inDateRange, type OptionalDateRange } from '@/components/form/DateRangeInputs';
+import DateRangeInputs, { type OptionalDateRange, type ShiftFilterValue } from '@/components/form/DateRangeInputs';
+import { matchesCreated } from '@/lib/export/date-paged';
 import { fetchPageWithDateFilter } from '@/lib/export/date-paged';
 
 type StockpileTab = 'stockpiles' | 'routes';
@@ -61,6 +62,7 @@ export default function MaterialPage() {
   >();
   const [filters, setFilters] = useState<StockpileFilters>({});
   const [dateRange, setDateRange] = useState<OptionalDateRange>({});
+  const [shiftFilter, setShiftFilter] = useState<ShiftFilterValue>('');
   const [tab, setTab] = useState<StockpileTab>('stockpiles');
 
   // ?tab=routes (хуучин /routes холбоос энд шилжинэ).
@@ -79,12 +81,13 @@ export default function MaterialPage() {
   };
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['stockpiles', { offset, limit, ...filters, dateRange }],
+    queryKey: ['stockpiles', { offset, limit, ...filters, dateRange, shiftFilter }],
     queryFn: () =>
       fetchPageWithDateFilter<Stockpile>({
         offset,
         limit,
         range: dateRange,
+        shift: shiftFilter,
         getDate: (row) => row.createdAt,
         fetchPage: (pageOffset, pageLimit) =>
           stockpileService.getStockpiles({ offset: pageOffset, limit: pageLimit, ...filters }),
@@ -92,14 +95,14 @@ export default function MaterialPage() {
   });
 
   const hasActiveFilters =
-    !!filters.type || !!filters.layerNumber || !!dateRange.from || !!dateRange.to;
+    !!filters.type || !!filters.layerNumber || !!dateRange.from || !!dateRange.to || !!shiftFilter;
 
   // Овоолго (одоогийн шүүлтүүрээр) болон маршрутыг нэг файлд.
   const { isExporting, exportNow } = useExcelExport(async () => {
     const [stockpileRows, routeRows] = await Promise.all([
       fetchAllPages<Stockpile>((offset, limit) =>
         stockpileService.getStockpiles({ offset, limit, ...filters }),
-      ).then((rows) => rows.filter((row) => inDateRange(row.createdAt, dateRange))),
+      ).then((rows) => rows.filter((row) => matchesCreated(row.createdAt, dateRange, shiftFilter))),
       fetchAllPages<Route>((offset, limit) => routeService.getRoutes({ offset, limit })),
     ]);
     if (stockpileRows.length + routeRows.length > 0) {
@@ -158,6 +161,7 @@ export default function MaterialPage() {
 
   const handleClearFilters = useCallback(() => {
     setDateRange({});
+    setShiftFilter('');
     handleFilterChange({});
   }, [handleFilterChange]);
 
@@ -265,6 +269,11 @@ export default function MaterialPage() {
             <DateRangeInputs
               label="Бүртгэсэн огноо"
               value={dateRange}
+              shift={shiftFilter}
+              onShiftChange={(value) => {
+                setShiftFilter(value);
+                paginate(1, limit);
+              }}
               onChange={(range) => {
                 setDateRange(range);
                 paginate(1, limit);
