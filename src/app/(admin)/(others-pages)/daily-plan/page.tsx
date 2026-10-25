@@ -19,7 +19,6 @@ import { useAuth } from '@/components/AuthProvider';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { DateRangeFilter } from '@/components/fuel/ui';
 import { rangePresets, type DateRange } from '@/lib/fuel/format';
-import Select from '@/components/form/Select';
 import DynamicTable from '@/components/tables/DynamicTable';
 import Pagination from '@/components/tables/Pagination';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +29,7 @@ import { usePagination } from '@/hooks/pagination';
 import { formatDate, formatDateFull } from '@/lib/time-formatter';
 import dailyPlanService from '@/services/internal/daily-plan';
 import { DailyPlan } from '@/services/internal/daily-plan/types';
-import { type ShiftType, shiftTypeItems } from '@/services/internal/shift/types';
+import { type ShiftType } from '@/services/internal/shift/types';
 import { dailyPlanActionRoles, hasRole } from '@/services/roles';
 import DailyPlanFormSidebar from './Sidebar';
 import StockpileLabel from '@/components/stockpile/StockpileTag';
@@ -418,32 +417,14 @@ export default function DailyPlansPage() {
                 setDateRange(range);
                 paginate(1, limit);
               }}
+              shift={selectedShiftType ?? ''}
+              onShiftChange={(value) => {
+                setSelectedShiftType(value || undefined);
+                paginate(1, limit);
+              }}
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Ээлж:
-            </label>
-            <div className="min-w-[180px]">
-              <Select
-                value={selectedShiftType || 'all'}
-                onChange={(value) => {
-                  setSelectedShiftType(
-                    value === 'all' || value === ''
-                      ? undefined
-                      : (value as ShiftType)
-                  );
-                  paginate(1, limit);
-                }}
-                placeholder="Бүх ээлж"
-                options={[
-                  { value: 'all', label: 'Бүх ээлж' },
-                  ...shiftTypeItems,
-                ]}
-              />
-            </div>
-          </div>
         </div>
 
         <div className="flex items-center gap-2 rounded-md bg-gray-50 px-3 py-1.5 dark:bg-gray-900">

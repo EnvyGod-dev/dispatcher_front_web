@@ -19,6 +19,7 @@ import {
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { exportShiftLogs } from '@/lib/export/shift-logs';
 import { useExcelExport } from '@/lib/export/use-excel-export';
+import DateRangeInputs, { type ShiftFilterValue } from '@/components/form/DateRangeInputs';
 import Pagination from '@/components/tables/Pagination';
 import Button from '@/components/ui/button/Button';
 
@@ -167,6 +168,9 @@ export default function RepairPage() {
         setEndDate,
     ] = useState('');
 
+    const [shiftFilter, setShiftFilter] =
+        useState<ShiftFilterValue>('');
+
     const [
         sidebarOpen,
         setSidebarOpen,
@@ -196,6 +200,7 @@ export default function RepairPage() {
             limit,
             startDate,
             endDate,
+            shiftFilter,
         ],
 
         queryFn: () =>
@@ -211,6 +216,10 @@ export default function RepairPage() {
                     endDate:
                         endDate ||
                         undefined,
+
+                    shiftType:
+                        shiftFilter ||
+                        undefined,
                 }),
     });
 
@@ -218,6 +227,7 @@ export default function RepairPage() {
         exportShiftLogs({
             startDate: startDate || undefined,
             endDate: endDate || undefined,
+            shiftType: shiftFilter || undefined,
             focus: 'repair',
         })
     );
@@ -461,7 +471,25 @@ export default function RepairPage() {
                 {/* FILTER */}
 
                 <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <div className="mb-3">
+                        <DateRangeInputs
+                            value={{
+                                from: startDate || undefined,
+                                to: endDate || undefined,
+                            }}
+                            onChange={(range) => {
+                                setStartDate(range.from ?? '');
+                                setEndDate(range.to ?? '');
+                                paginate(1, limit);
+                            }}
+                            shift={shiftFilter}
+                            onShiftChange={(value) => {
+                                setShiftFilter(value);
+                                paginate(1, limit);
+                            }}
+                        />
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <div className="relative">
                             <Search
                                 size={16}
@@ -487,50 +515,6 @@ export default function RepairPage() {
                             />
                         </div>
 
-                        <input
-                            type="date"
-                            value={
-                                startDate
-                            }
-                            onChange={(
-                                event
-                            ) => {
-                                setStartDate(
-                                    event
-                                        .target
-                                        .value
-                                );
-
-                                paginate(
-                                    1,
-                                    limit
-                                );
-                            }}
-                            className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-blue-400 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
-                        />
-
-                        <input
-                            type="date"
-                            value={
-                                endDate
-                            }
-                            onChange={(
-                                event
-                            ) => {
-                                setEndDate(
-                                    event
-                                        .target
-                                        .value
-                                );
-
-                                paginate(
-                                    1,
-                                    limit
-                                );
-                            }}
-                            className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-blue-400 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
-                        />
-
                         <button
                             type="button"
                             onClick={() => {
@@ -539,6 +523,8 @@ export default function RepairPage() {
                                 setStartDate('');
 
                                 setEndDate('');
+
+                                setShiftFilter('');
 
                                 paginate(
                                     1,

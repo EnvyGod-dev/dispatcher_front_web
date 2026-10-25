@@ -1,7 +1,6 @@
 "use client";
 
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
-import DatePicker from "@/components/form/date-picker";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import DynamicTable from "@/components/tables/DynamicTable";
@@ -15,7 +14,7 @@ import employeeService from "@/services/internal/employee";
 import { Employee } from "@/services/internal/employee/type";
 import inspectionService from "@/services/internal/inspection";
 import { VehicleInspectionSummary } from "@/services/internal/inspection/types";
-import { ShiftType, shiftTypeItems } from "@/services/internal/shift/types";
+import { ShiftType } from "@/services/internal/shift/types";
 import vehicleService from "@/services/internal/vehicle";
 import vehicleOrganizationService from "@/services/internal/vehicle-organization";
 import { VehicleOrganization } from "@/services/internal/vehicle-organization/types";
@@ -30,6 +29,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import DateRangeInputs from "@/components/form/DateRangeInputs";
 import { exportExcel } from "@/lib/fuel/export";
 import { fetchAllPages } from "@/lib/export/fetch-all";
 import { useExcelExport } from "@/lib/export/use-excel-export";
@@ -286,6 +286,27 @@ export default function InspectionReportsPage() {
 
       {/* Filters */}
       <div className="rounded-lg border border-border bg-card p-3 dark:bg-gray-900">
+        {/* Хугацаа (хурдан сонголттой) ба ээлж */}
+        <div className="mb-4">
+          <DateRangeInputs
+            label="Хугацаа"
+            value={{
+              from: filters.startDate?.slice(0, 10),
+              to: filters.endDate?.slice(0, 10),
+            }}
+            onChange={(range) => {
+              // Backend ээлжийн үүсгэсэн цагаар харьцуулдаг тул УБ цагаар бүтэн өдрөөр илгээнэ.
+              setFilters((prev) => ({
+                ...prev,
+                startDate: range.from ? `${range.from}T00:00:00+08:00` : undefined,
+                endDate: range.to ? `${range.to}T23:59:59+08:00` : undefined,
+              }));
+              paginate(1, limit);
+            }}
+            shift={filters.shiftType ?? ""}
+            onShiftChange={(value) => handleFilterChange("shiftType", (value || undefined) as ShiftType | undefined)}
+          />
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2">
             <Label>Компани</Label>
@@ -371,53 +392,6 @@ export default function InspectionReportsPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Ээлжийн төрөл</Label>
-            <Select
-              value={filters.shiftType || ""}
-              onChange={(value) =>
-                handleFilterChange("shiftType", value as ShiftType)
-              }
-              placeholder="Бүгд"
-              options={shiftTypeItems}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Эхлэх огноо</Label>
-            <DatePicker
-              id="start-date-picker"
-              placeholder="Эхлэх огноо"
-              mode="single"
-              defaultDate={
-                filters.startDate ? new Date(filters.startDate) : undefined
-              }
-              onChange={(dates) =>
-                handleFilterChange(
-                  "startDate",
-                  dates?.[0] ? dates[0].toISOString() : undefined,
-                )
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Дуусах огноо</Label>
-            <DatePicker
-              id="end-date-picker"
-              placeholder="Дуусах огноо"
-              mode="single"
-              defaultDate={
-                filters.endDate ? new Date(filters.endDate) : undefined
-              }
-              onChange={(dates) =>
-                handleFilterChange(
-                  "endDate",
-                  dates?.[0] ? dates[0].toISOString() : undefined,
-                )
-              }
-            />
-          </div>
         </div>
 
         {/* Active filters badge */}

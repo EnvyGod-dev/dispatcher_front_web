@@ -35,7 +35,8 @@ import { ConfirmDialog } from '@/components/ui/alert/Alert';
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { FileSpreadsheet, FilterX, Search } from 'lucide-react';
 import { downloadEmployeeTemplate, exportEmployees } from '@/lib/employee/excel';
-import DateRangeInputs, { inDateRange, type OptionalDateRange } from '@/components/form/DateRangeInputs';
+import DateRangeInputs, { type OptionalDateRange, type ShiftFilterValue } from '@/components/form/DateRangeInputs';
+import { matchesCreated } from '@/lib/export/date-paged';
 
 type DriverShiftGroupFilter = 'A' | 'B' | 'C' | 'D' | undefined;
 
@@ -74,6 +75,7 @@ export default function EmployeePage() {
   const [filterPhoneNumber, setFilterPhoneNumber] = useState('');
   const [filterEmail, setFilterEmail] = useState('');
   const [dateRange, setDateRange] = useState<OptionalDateRange>({});
+  const [shiftFilter, setShiftFilter] = useState<ShiftFilterValue>('');
 
   const [bulkStatus, setBulkStatus] = useState<UserStatus | undefined>(
     undefined
@@ -99,7 +101,8 @@ export default function EmployeePage() {
       filterPhoneNumber.trim() ||
       filterEmail.trim() ||
       dateRange.from ||
-      dateRange.to
+      dateRange.to ||
+      shiftFilter
   );
 
   /**
@@ -243,7 +246,7 @@ export default function EmployeePage() {
         return false;
       }
 
-      if (!inDateRange(employee.createdAt, dateRange)) {
+      if (!matchesCreated(employee.createdAt, dateRange, shiftFilter)) {
         return false;
       }
 
@@ -251,6 +254,7 @@ export default function EmployeePage() {
     });
   }, [
     dateRange,
+    shiftFilter,
     allEmployees,
     deferredSearchText,
     filterStatus,
@@ -357,6 +361,7 @@ export default function EmployeePage() {
     setFilterPhoneNumber('');
     setFilterEmail('');
     setDateRange({});
+    setShiftFilter('');
     clearSelectedEmployees();
     paginate(1, limit);
   }, [limit, paginate]);
@@ -563,6 +568,11 @@ export default function EmployeePage() {
             <DateRangeInputs
               label="Бүртгэсэн огноо"
               value={dateRange}
+              shift={shiftFilter}
+              onShiftChange={(value) => {
+                setShiftFilter(value);
+                paginate(1, limit);
+              }}
               onChange={(range) => {
                 setDateRange(range);
                 paginate(1, limit);

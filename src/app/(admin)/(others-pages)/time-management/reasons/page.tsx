@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Select from '@/components/form/Select';
-import DateRangeInputs, { inDateRange, type OptionalDateRange } from '@/components/form/DateRangeInputs';
+import DateRangeInputs, { type OptionalDateRange, type ShiftFilterValue } from '@/components/form/DateRangeInputs';
+import { matchesCreated } from '@/lib/export/date-paged';
 import DynamicTable from '@/components/tables/DynamicTable';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/alert/Alert';
@@ -50,6 +51,7 @@ export default function ReasonTypesPage() {
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [dateRange, setDateRange] = useState<OptionalDateRange>({});
+  const [shiftFilter, setShiftFilter] = useState<ShiftFilterValue>('');
 
   const idleQuery = useQuery({
     queryKey: ['reason-types', 'idle'],
@@ -105,13 +107,13 @@ export default function ReasonTypesPage() {
         return false;
       }
 
-      if (!inDateRange(row.createdAt, dateRange)) {
+      if (!matchesCreated(row.createdAt, dateRange, shiftFilter)) {
         return false;
       }
 
       return !query || row.name.toLowerCase().includes(query);
     });
-  }, [rows, categoryFilter, vehicleTypeFilter, search, dateRange]);
+  }, [rows, categoryFilter, vehicleTypeFilter, search, dateRange, shiftFilter]);
 
   const deleteMutation = useMutation({
     mutationFn: (reason: ReasonRow) =>
@@ -242,7 +244,12 @@ export default function ReasonTypesPage() {
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-600 dark:bg-gray-900">
         <div className="w-full">
-          <DateRangeInputs label="Бүртгэсэн огноо" value={dateRange} onChange={setDateRange} />
+          <DateRangeInputs label="Бүртгэсэн огноо" value={dateRange}
+              shift={shiftFilter}
+              onShiftChange={(value) => {
+                setShiftFilter(value);
+                
+              }} onChange={setDateRange} />
         </div>
         <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

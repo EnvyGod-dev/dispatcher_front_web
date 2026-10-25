@@ -4,6 +4,7 @@ import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import { DateRange, rangePresets } from '@/lib/fuel/format';
 import { Download, Inbox, Loader2 } from 'lucide-react';
+import { ShiftChips, type ShiftFilterValue } from '@/components/form/DateRangeInputs';
 import React, { useState } from 'react';
 
 // ─── Layout ────────────────────────────────────────────────
@@ -308,10 +309,15 @@ export function DateRangeFilter({
   value,
   onChange,
   presets = rangePresets,
+  shift,
+  onShiftChange,
 }: {
   value: DateRange;
   onChange: (value: DateRange) => void;
   presets?: typeof rangePresets;
+  /** Өгвөл хугацааны ард ээлжийн сонголт (Бүх ээлж / Өдөр / Шөнө) гарна. */
+  shift?: ShiftFilterValue;
+  onShiftChange?: (value: ShiftFilterValue) => void;
 }) {
   const active = presets.find((p) => {
     const r = p.range();
@@ -358,6 +364,12 @@ export function DateRangeFilter({
           </button>
         ))}
       </div>
+      {onShiftChange && (
+        <>
+          <span className="hidden h-5 w-px bg-gray-200 sm:block dark:bg-gray-700" />
+          <ShiftChips value={shift ?? ''} onChange={onShiftChange} />
+        </>
+      )}
     </div>
   );
 }

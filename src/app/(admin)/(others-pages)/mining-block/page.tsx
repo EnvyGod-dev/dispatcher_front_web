@@ -37,7 +37,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { exportExcel } from '@/lib/fuel/export';
 import { fetchAllPages } from '@/lib/export/fetch-all';
 import { useExcelExport } from '@/lib/export/use-excel-export';
-import DateRangeInputs, { inDateRange, type OptionalDateRange } from '@/components/form/DateRangeInputs';
+import DateRangeInputs, { type OptionalDateRange, type ShiftFilterValue } from '@/components/form/DateRangeInputs';
+import { matchesCreated } from '@/lib/export/date-paged';
 import { fetchPageWithDateFilter } from '@/lib/export/date-paged';
 
 export default function MiningBlocksPage() {
@@ -54,14 +55,16 @@ export default function MiningBlocksPage() {
   const [deletingBlock, setDeletingBlock] = useState<MiningBlock | undefined>();
   const [filters, setFilters] = useState<MiningBlockFilters>({});
   const [dateRange, setDateRange] = useState<OptionalDateRange>({});
+  const [shiftFilter, setShiftFilter] = useState<ShiftFilterValue>('');
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['mining-blocks', { offset, limit, ...filters, dateRange }],
+    queryKey: ['mining-blocks', { offset, limit, ...filters, dateRange, shiftFilter }],
     queryFn: () =>
       fetchPageWithDateFilter<MiningBlock>({
         offset,
         limit,
         range: dateRange,
+        shift: shiftFilter,
         getDate: (row) => row.createdAt,
         fetchPage: (pageOffset, pageLimit) =>
           miningBlockService.getMiningBlocks({ offset: pageOffset, limit: pageLimit, ...filters }),
@@ -71,7 +74,7 @@ export default function MiningBlocksPage() {
   const { isExporting, exportNow } = useExcelExport(async () => {
     const rows = await fetchAllPages<MiningBlock>((offset, limit) =>
       miningBlockService.getMiningBlocks({ offset, limit, ...filters }),
-    ).then((all) => all.filter((row) => inDateRange(row.createdAt, dateRange)));
+    ).then((all) => all.filter((row) => matchesCreated(row.createdAt, dateRange, shiftFilter)));
     if (rows.length) {
       exportExcel('blok', [
         {
@@ -98,7 +101,8 @@ export default function MiningBlocksPage() {
     typeof filters.isActive === 'boolean' ||
     !!filters.layerNumber ||
     !!dateRange.from ||
-    !!dateRange.to;
+    !!dateRange.to ||
+    !!shiftFilter;
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => miningBlockService.deleteMiningBlock(id),
@@ -118,6 +122,7 @@ export default function MiningBlocksPage() {
 
   const handleClearFilters = () => {
     setDateRange({});
+    setShiftFilter('');
     handleFiltersChange({});
   };
 
@@ -294,6 +299,11 @@ export default function MiningBlocksPage() {
             <DateRangeInputs
               label="Бүртгэсэн огноо"
               value={dateRange}
+              shift={shiftFilter}
+              onShiftChange={(value) => {
+                setShiftFilter(value);
+                paginate(1, limit);
+              }}
               onChange={(range) => {
                 setDateRange(range);
                 paginate(1, limit);

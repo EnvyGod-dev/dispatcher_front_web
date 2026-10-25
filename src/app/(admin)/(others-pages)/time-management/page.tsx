@@ -15,7 +15,7 @@ import {
 } from 'sonner';
 
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
-import DateRangeInputs from '@/components/form/DateRangeInputs';
+import DateRangeInputs, { type ShiftFilterValue } from '@/components/form/DateRangeInputs';
 import { exportShiftLogs } from '@/lib/export/shift-logs';
 import { useExcelExport } from '@/lib/export/use-excel-export';
 import Pagination from '@/components/tables/Pagination';
@@ -223,6 +223,9 @@ export default function TimeManagementPage() {
         today
     );
 
+    const [shiftFilter, setShiftFilter] =
+        useState<ShiftFilterValue>('');
+
     // ========================================================
     // QUERY
     // ========================================================
@@ -240,6 +243,7 @@ export default function TimeManagementPage() {
                 limit,
                 startDate,
                 endDate,
+                shiftFilter,
             },
         ],
 
@@ -250,6 +254,9 @@ export default function TimeManagementPage() {
                     limit,
                     startDate,
                     endDate,
+                    shiftType:
+                        shiftFilter ||
+                        undefined,
                 }),
     });
 
@@ -257,6 +264,7 @@ export default function TimeManagementPage() {
         exportShiftLogs({
             startDate: startDate || undefined,
             endDate: endDate || undefined,
+            shiftType: shiftFilter || undefined,
             focus: 'idle',
         })
     );
@@ -520,6 +528,11 @@ export default function TimeManagementPage() {
                     onChange={(range) => {
                         setStartDate(range.from ?? '');
                         setEndDate(range.to ?? '');
+                        paginate(1, limit);
+                    }}
+                    shift={shiftFilter}
+                    onShiftChange={(value) => {
+                        setShiftFilter(value);
                         paginate(1, limit);
                     }}
                 />

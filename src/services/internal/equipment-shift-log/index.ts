@@ -597,6 +597,8 @@ export type GetLogsParams = {
     endDate?: string;
 
     vehicleId?: string;
+
+    shiftType?: ShiftType;
 };
 
 export type GetLogsResponse = {
@@ -650,6 +652,11 @@ const getLogs = async (
     ) {
         query.vehicleId =
             params.vehicleId;
+    }
+
+    if (params.shiftType) {
+        query.shiftType =
+            params.shiftType;
     }
 
     const res =

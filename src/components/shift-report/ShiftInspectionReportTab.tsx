@@ -42,12 +42,6 @@ const inspectionStateOptions = [
   { value: 'has_issue', label: 'Аюултай' },
 ] as const;
 
-const shiftTypeOptions = [
-  { value: 'all', label: 'Бүх ээлж' },
-  { value: 'day', label: 'Өдрийн ээлж' },
-  { value: 'night', label: 'Шөнийн ээлж' },
-] as const;
-
 const UB_TIMEZONE = 'Asia/Ulaanbaatar';
 
 const getDateOnlyParts = (date: Date, timeZone = UB_TIMEZONE) => {
@@ -372,7 +366,7 @@ export default function ShiftInspectionReportTab({
     <div className="space-y-4">
       <div className="rounded-2xl border bg-background p-4 shadow-sm">
         <div className="mb-4 space-y-2">
-          <label className="text-sm font-medium">Ээлжийн огноо (эхлэх – дуусах)</label>
+          <label className="text-sm font-medium">Хугацаа, ээлж</label>
           <DateRangeFilter
             value={{
               from: filters.startDate || getDefaultOperationalDate(),
@@ -387,29 +381,11 @@ export default function ShiftInspectionReportTab({
               }));
               paginate(1, limit);
             }}
+            shift={filters.shiftType ?? ''}
+            onShiftChange={(value) => handleFilterChange('shiftType', value || undefined)}
           />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Ээлжийн төрөл</label>
-            <Select
-              value={filters.shiftType || ''}
-              onChange={(value) =>
-                handleFilterChange(
-                  'shiftType',
-                  value === 'all' || value === ''
-                    ? undefined
-                    : (value as 'day' | 'night')
-                )
-              }
-              placeholder="Бүх ээлж"
-              options={shiftTypeOptions.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-            />
-          </div>
-
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-2">
             <label className="text-sm font-medium">Үзлэгийн төлөв</label>
             <Select
