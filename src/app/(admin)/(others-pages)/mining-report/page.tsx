@@ -12,12 +12,14 @@ import type {
   MiningHighlights,
   MiningDayRow,
   MiningExcavatorRow,
+  MiningHourRow,
   MiningOperatorRow,
   MiningReport,
   MiningTruckRow,
 } from '@/services/internal/mining-report/types';
 import { miningReportRoles, UserRole } from '@/services/roles';
 import { stockpileTypeMap } from '@/services/internal/stockpile/types';
+import { vehicleTypeLabels } from '@/services/internal/vehicle/types';
 import { useQuery } from '@tanstack/react-query';
 import { ApexOptions } from 'apexcharts';
 import dayjs from 'dayjs';
@@ -201,6 +203,12 @@ function ReportBody({ data, shift }: { data: MiningReport; shift: ShiftFilter })
             <DailyChart days={data.days} shift={shift} />
           </Panel>
 
+          {data.hourly && (
+            <Panel title="Цаг тутмын рейс" description={`Аль цагт хэдэн рейс хийгдсэн (${dayjs(data.from).format('MM.DD')} – ${dayjs(data.to).format('MM.DD')} нийт), өдөр/шөнийн ээлжээр`}>
+              <HourlyChart hours={data.hourly} shift={shift} />
+            </Panel>
+          )}
+
           <Panel title="Өдрөөр">
             <DataTable columns={dayColumns(shift)} rows={[...data.days].reverse()} rowKey={(d) => d.date} pageSize={31} />
           </Panel>
@@ -209,10 +217,16 @@ function ReportBody({ data, shift }: { data: MiningReport; shift: ShiftFilter })
             <Panel title="Экскаватор" description="Бүтээл, цаг ашиглалт, маркшейдерийн зөрүү">
               <DataTable columns={excavatorColumns} rows={data.excavators} rowKey={(e) => e.vehicleId} empty="Мэдээлэл алга" />
             </Panel>
-            <Panel title="Автосамосвал" description={`${data.trucks.length} машин`}>
+            <Panel title="Автосамосвал" description={`${data.trucks.filter((r) => r.trips > 0).length} машин рейс хийсэн`}>
               <DataTable columns={truckColumns} rows={data.trucks} rowKey={(r) => r.vehicleId} empty="Мэдээлэл алга" />
             </Panel>
           </div>
+
+          {data.supportVehicles && data.supportVehicles.length > 0 && (
+            <Panel title="Туслах техник" description={`${data.supportVehicles.length} техник · рейсгүй ажилласан ээлж, мото цаг, түлш`}>
+              <DataTable columns={supportColumns} rows={data.supportVehicles} rowKey={(r) => r.vehicleId} empty="Мэдээлэл алга" />
+            </Panel>
+          )}
 
           <div className="grid grid-cols-1 gap-6 2xl:grid-cols-3">
             <Panel title="Оператор" className="2xl:col-span-2">
@@ -493,6 +507,51 @@ function DailyChart({ days, shift }: { days: MiningDayRow[]; shift: ShiftFilter 
   );
 }
 
+/** Ээлжийн эхлэлээс (06:00) эхлэн 24 цагийг дараалуулна. */
+const hourOrder = Array.from({ length: 24 }, (_, i) => (i + 6) % 24);
+const hourLabel = (hour: number) => `${String(hour).padStart(2, '0')}:00–${String((hour + 1) % 24).padStart(2, '0')}:00`;
+
+function HourlyChart({ hours, shift }: { hours: MiningHourRow[]; shift: ShiftFilter }) {
+  const byHour = new Map(hours.map((h) => [h.hour, h]));
+  const rows = hourOrder.map((hour) => byHour.get(hour) ?? { hour, day: 0, night: 0 });
+  const allSeries = [
+    { key: 'day' as const, name: 'Өдрийн ээлж', color: SHIFT_COLORS.day, data: rows.map((r) => r.day) },
+    { key: 'night' as const, name: 'Шөнийн ээлж', color: SHIFT_COLORS.night, data: rows.map((r) => r.night) },
+  ];
+  const series = allSeries.filter((s) => shift === 'all' || s.key === shift);
+
+  const options: ApexOptions = {
+    chart: { type: 'bar', stacked: true, fontFamily: 'Gip, sans-serif', toolbar: { show: false }, zoom: { enabled: false } },
+    colors: series.map((s) => s.color),
+    plotOptions: { bar: { columnWidth: '70%', borderRadius: 3, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last' } },
+    dataLabels: { enabled: false },
+    legend: { position: 'top', horizontalAlign: 'left', fontSize: '13px', markers: { size: 6 } },
+    grid: { borderColor: 'rgba(148,163,184,0.18)', strokeDashArray: 4 },
+    xaxis: {
+      categories: rows.map((r) => String(r.hour).padStart(2, '0')),
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: { style: { colors: '#98a2b3', fontSize: '12px' }, rotate: 0 },
+    },
+    yaxis: { labels: { formatter: (v: number) => fmtNumber(v, 0), style: { colors: ['#98a2b3'] } } },
+    tooltip: {
+      shared: true,
+      intersect: false,
+      x: { formatter: (_v: number, opts?: { dataPointIndex: number }) => hourLabel(rows[opts?.dataPointIndex ?? 0]?.hour ?? 0) },
+      y: { formatter: (v: number) => `${fmtNumber(v, 0)} рейс` },
+    },
+  };
+
+  return (
+    <ReactApexChart
+      options={options}
+      series={series.map(({ name, data }) => ({ name, data }))}
+      type="bar"
+      height={280}
+    />
+  );
+}
+
 function PlaceList({ items }: { items: { key: string; label: string; trips: number; m3: number }[] }) {
   const total = items.reduce((s, i) => s + i.m3, 0);
   if (!items.length) return <p className="py-4 text-center text-sm text-gray-500">Мэдээлэл алга</p>;
@@ -588,6 +647,24 @@ const excavatorColumns: Column<MiningExcavatorRow>[] = [
         </div>
       ),
   },
+];
+
+const supportColumns: Column<MiningTruckRow>[] = [
+  {
+    key: 'vehicle',
+    header: 'Техник',
+    render: (r) => (
+      <div>
+        <p className="font-medium text-gray-800 dark:text-white/90">{r.code ?? r.name}</p>
+        <p className="text-xs text-gray-500">{[r.type ? vehicleTypeLabels[r.type] ?? r.type : null, r.model, r.owner].filter(Boolean).join(' · ')}</p>
+      </div>
+    ),
+  },
+  { key: 'shifts', header: 'Ээлж', align: 'right', render: (r) => r.shifts },
+  { key: 'operators', header: 'Оператор', align: 'right', render: (r) => r.operators },
+  { key: 'moto', header: 'Мото цаг', align: 'right', render: (r) => fmtNumber(r.motoHours) },
+  { key: 'km', header: 'Км', align: 'right', render: (r) => fmtNumber(r.km) },
+  { key: 'fuel', header: 'Түлш', align: 'right', render: (r) => liters(r.fuelLiters) },
 ];
 
 const truckColumns: Column<MiningTruckRow>[] = [
@@ -755,6 +832,30 @@ function exportReport(data: MiningReport, shift: ShiftFilter) {
           { header: 'Марк', value: (r: MiningTruckRow) => r.model ?? '', width: 12 },
           { header: 'Эзэмшигч', value: (r: MiningTruckRow) => r.owner ?? '', width: 16 },
           ...metricCols<MiningTruckRow>(),
+        ],
+      },
+      {
+        name: 'Туслах техник',
+        rows: data.supportVehicles ?? [],
+        columns: [
+          { header: 'Техник', value: (r: MiningTruckRow) => r.code ?? r.name, width: 12 },
+          { header: 'Төрөл', value: (r: MiningTruckRow) => (r.type ? vehicleTypeLabels[r.type] ?? r.type : ''), width: 14 },
+          { header: 'Марк', value: (r: MiningTruckRow) => r.model ?? '', width: 12 },
+          { header: 'Эзэмшигч', value: (r: MiningTruckRow) => r.owner ?? '', width: 16 },
+          { header: 'Ээлж', value: (r: MiningTruckRow) => r.shifts, width: 8 },
+          { header: 'Мото цаг', value: (r: MiningTruckRow) => r.motoHours, width: 10 },
+          { header: 'Км', value: (r: MiningTruckRow) => r.km, width: 9 },
+          { header: 'Түлш л', value: (r: MiningTruckRow) => r.fuelLiters, width: 10 },
+        ],
+      },
+      {
+        name: 'Цагаар',
+        rows: hourOrder.map((h) => (data.hourly ?? []).find((x) => x.hour === h) ?? { hour: h, day: 0, night: 0 }),
+        columns: [
+          { header: 'Цаг', value: (h: MiningHourRow) => hourLabel(h.hour), width: 12 },
+          { header: 'Өдрийн ээлж рейс', value: (h: MiningHourRow) => h.day, width: 16 },
+          { header: 'Шөнийн ээлж рейс', value: (h: MiningHourRow) => h.night, width: 16 },
+          { header: 'Нийт', value: (h: MiningHourRow) => h.day + h.night, width: 10 },
         ],
       },
       {

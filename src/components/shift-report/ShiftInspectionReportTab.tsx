@@ -1,6 +1,6 @@
 'use client';
 
-import DatePicker from '@/components/form/date-picker';
+import { DateRangeFilter } from '@/components/fuel/ui';
 import Select from '@/components/form/Select';
 import DynamicTable from '@/components/tables/DynamicTable';
 import Pagination from '@/components/tables/Pagination';
@@ -72,10 +72,8 @@ const toOperationalDateString = (date: Date) => {
   return `${parts.year}-${parts.month}-${parts.day}`;
 };
 
-const parseDateOnlyToLocalDate = (value: string) =>
-  new Date(`${value}T00:00:00`);
-
-const getDefaultOperationalDate = () => toOperationalDateString(new Date());
+const getDefaultOperationalDate = () =>
+  toOperationalDateString(new Date()) ?? new Date().toISOString().slice(0, 10);
 
 const getInspectionResult = (row: ShiftInspectionReportRow) => {
   if (!row.hasInspection) {
@@ -112,7 +110,8 @@ export default function ShiftInspectionReportTab({
   const [vehicleOrganization, setVehicleOrganization] = useState<VehicleOrganization | undefined>(undefined);
 
   const [filters, setFilters] = useState<ShiftInspectionReportFilters>({
-    operationalDate: getDefaultOperationalDate(),
+    startDate: getDefaultOperationalDate(),
+    endDate: getDefaultOperationalDate(),
     shiftType: undefined,
     inspectionState: 'all',
   });
@@ -316,9 +315,14 @@ export default function ShiftInspectionReportTab({
     handleFilterChange('vehicleType', nextVehicleType);
   };
 
+  const dateRangeLabel =
+    filters.startDate === filters.endDate
+      ? filters.startDate || '-'
+      : `${filters.startDate || '…'} – ${filters.endDate || '…'}`;
+
   const filterSummary = useMemo(() => {
     const summary = [
-      `Ээлжийн огноо: ${filters.operationalDate || '-'}`,
+      `Ээлжийн огноо: ${dateRangeLabel}`,
       `Ээлжийн төрөл: ${filters.shiftType === 'day'
         ? 'Өдрийн ээлж'
         : filters.shiftType === 'night'
@@ -337,7 +341,7 @@ export default function ShiftInspectionReportTab({
     if (vehicle) summary.push(`Техник: ${vehicle.code} - ${vehicle.name}`);
 
     return summary;
-  }, [driver, filters, vehicle, vehicleOrganization]);
+  }, [dateRangeLabel, driver, filters, vehicle, vehicleOrganization]);
 
   const handleExport = async () => {
     try {
@@ -367,27 +371,25 @@ export default function ShiftInspectionReportTab({
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border bg-background p-4 shadow-sm">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-7">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Ээлжийн огноо</label>
-            <DatePicker
-              id="inspection-operational-date"
-              placeholder="Огноо сонгох"
-              mode="single"
-              defaultDate={
-                filters.operationalDate
-                  ? parseDateOnlyToLocalDate(filters.operationalDate)
-                  : undefined
-              }
-              onChange={(dates) =>
-                handleFilterChange(
-                  'operationalDate',
-                  dates?.[0] ? toOperationalDateString(dates[0]) : undefined
-                )
-              }
-            />
-          </div>
-
+        <div className="mb-4 space-y-2">
+          <label className="text-sm font-medium">Ээлжийн огноо (эхлэх – дуусах)</label>
+          <DateRangeFilter
+            value={{
+              from: filters.startDate || getDefaultOperationalDate(),
+              to: filters.endDate || getDefaultOperationalDate(),
+            }}
+            onChange={(range) => {
+              setFilters((prev) => ({
+                ...prev,
+                operationalDate: undefined,
+                startDate: range.from,
+                endDate: range.to,
+              }));
+              paginate(1, limit);
+            }}
+          />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           <div className="space-y-2">
             <label className="text-sm font-medium">Ээлжийн төрөл</label>
             <Select
@@ -500,7 +502,7 @@ export default function ShiftInspectionReportTab({
         <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span>Идэвхтэй шүүлт:</span>
-            <span>{filters.operationalDate || '-'}</span>
+            <span>{dateRangeLabel}</span>
             <span>•</span>
             <span>
               {filters.shiftType === 'day'
