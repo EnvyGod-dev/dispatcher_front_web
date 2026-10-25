@@ -27,6 +27,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { stockpileTypeMap } from '@/services/internal/stockpile/types';
+import { vehicleTypeLabels } from '@/services/internal/vehicle/types';
 
 type PaginatedResponse<T> = {
   data: T[];
@@ -114,14 +115,13 @@ export default function DailyPlanFormSidebar({
   });
 
   const { data: vehiclesData, isLoading: isLoadingVehicles } = useQuery({
-    queryKey: ['vehicles', 'excavator', 'daily-plan', 'all'],
+    queryKey: ['vehicles', 'daily-plan', 'all'],
     enabled: isOpen,
     queryFn: () =>
       fetchAllPages((offset, limit) =>
         vehicleService.getVehicles({
           limit,
           offset,
-          type: 'excavator',
         }),
       ),
   });
@@ -140,7 +140,14 @@ export default function DailyPlanFormSidebar({
     stockpileIds
       .map((id) => stockpiles?.find((stockpile) => stockpile.id === id)?.routeCode)
       .find(Boolean) ?? null;
-  const vehicles = vehiclesData?.data;
+  // Бүх төрлийн техник (ашиглалтаас гарсныг эс тооцвол), төрлөөр нь эрэмбэлнэ.
+  const vehicles = vehiclesData?.data
+    ?.filter((vehicle) => vehicle.status !== 'retired' || vehicle.id === vehicleId)
+    .sort(
+      (a, b) =>
+        (vehicleTypeLabels[a.type] ?? a.type).localeCompare(vehicleTypeLabels[b.type] ?? b.type) ||
+        (a.code ?? '').localeCompare(b.code ?? '', 'mn', { numeric: true })
+    );
 
   useEffect(() => {
     if (editingPlan) {
@@ -361,7 +368,18 @@ export default function DailyPlanFormSidebar({
                       options={
                         vehicles?.map((vehicle) => ({
                           value: vehicle.id,
-                          label: `${vehicle.code}`,
+                          label: [vehicle.code || vehicle.name, vehicleTypeLabels[vehicle.type]]
+                            .filter(Boolean)
+                            .join(' · '),
+                          searchText: [
+                            vehicle.code,
+                            vehicle.name,
+                            vehicle.mineNumber,
+                            vehicle.vehicleNumber,
+                            vehicleTypeLabels[vehicle.type],
+                          ]
+                            .filter(Boolean)
+                            .join(' '),
                         })) ?? []
                       }
                     />
