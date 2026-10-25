@@ -31,6 +31,8 @@ import { ChevronDown, ChevronUp, Filter, X } from 'lucide-react';
 import ColumnSettings, { ColumnOption } from './ColumnSettings';
 import { exportExcel } from '@/lib/fuel/export';
 import { fetchAllPages } from '@/lib/export/fetch-all';
+import DateRangeInputs, { inDateRange, type OptionalDateRange } from '../form/DateRangeInputs';
+import { fetchPageWithDateFilter } from '@/lib/export/date-paged';
 
 const STORAGE_KEY = 'vehicles_visible_columns';
 
@@ -96,6 +98,7 @@ export default function VehiclesPage() {
 
   const [deleteVehicle, setDeleteVehicle] = useState<Vehicle | null>(null);
 
+  const [dateRange, setDateRange] = useState<OptionalDateRange>({});
   const [filterName, setFilterName] = useState('');
   const [filterCode, setFilterCode] = useState('');
   const [filterVehicleNumber, setFilterVehicleNumber] = useState('');
@@ -148,7 +151,7 @@ export default function VehiclesPage() {
           sortColumn,
           sortOrder,
         }),
-      );
+      ).then((all) => all.filter((v) => inDateRange(v.createdAt, dateRange)));
       if (rows.length === 0) {
         toast.error('Татах техник алга');
         return;
@@ -198,12 +201,19 @@ export default function VehiclesPage() {
         vehicleOrganizationId: filterVehicleOrganizationId,
         sortColumn,
         sortOrder,
+        dateRange,
       },
     ],
     queryFn: () =>
-      vehicleService.getVehicles({
+      fetchPageWithDateFilter<Vehicle>({
         offset,
         limit,
+        range: dateRange,
+        getDate: (v) => v.createdAt,
+        fetchPage: (pageOffset, pageLimit) =>
+      vehicleService.getVehicles({
+        offset: pageOffset,
+        limit: pageLimit,
         name: filterName || undefined,
         code: filterCode || undefined,
         vehicleNumber: filterVehicleNumber || undefined,
@@ -212,6 +222,7 @@ export default function VehiclesPage() {
         vehicleOrganizationId: filterVehicleOrganizationId,
         sortColumn,
         sortOrder,
+      }),
       }),
   });
 
@@ -272,6 +283,7 @@ export default function VehiclesPage() {
     setFilterType(undefined);
     setFilterStatus(undefined);
     setFilterVehicleOrganizationId(undefined);
+    setDateRange({});
     paginate(1, limit);
   }, [limit, paginate]);
 
@@ -432,7 +444,9 @@ export default function VehiclesPage() {
     filterVehicleNumber ||
     filterType ||
     filterStatus ||
-    filterVehicleOrganizationId;
+    filterVehicleOrganizationId ||
+    dateRange.from ||
+    dateRange.to;
 
   return (
     <div>
@@ -449,6 +463,14 @@ export default function VehiclesPage() {
 
       <div className="space-y-4">
         {/* filters */}
+        <DateRangeInputs
+          label="Бүртгэсэн огноо"
+          value={dateRange}
+          onChange={(range) => {
+            setDateRange(range);
+            paginate(1, limit);
+          }}
+        />
         <div className="flex items-center justify-between">
           <Button
             size="sm"

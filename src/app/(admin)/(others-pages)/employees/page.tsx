@@ -35,6 +35,7 @@ import { ConfirmDialog } from '@/components/ui/alert/Alert';
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { FileSpreadsheet, FilterX, Search } from 'lucide-react';
 import { downloadEmployeeTemplate, exportEmployees } from '@/lib/employee/excel';
+import DateRangeInputs, { inDateRange, type OptionalDateRange } from '@/components/form/DateRangeInputs';
 
 type DriverShiftGroupFilter = 'A' | 'B' | 'C' | 'D' | undefined;
 
@@ -72,6 +73,7 @@ export default function EmployeePage() {
   const [filterRegisterNumber, setFilterRegisterNumber] = useState('');
   const [filterPhoneNumber, setFilterPhoneNumber] = useState('');
   const [filterEmail, setFilterEmail] = useState('');
+  const [dateRange, setDateRange] = useState<OptionalDateRange>({});
 
   const [bulkStatus, setBulkStatus] = useState<UserStatus | undefined>(
     undefined
@@ -95,7 +97,9 @@ export default function EmployeePage() {
       filterDepartment.trim() ||
       filterRegisterNumber.trim() ||
       filterPhoneNumber.trim() ||
-      filterEmail.trim()
+      filterEmail.trim() ||
+      dateRange.from ||
+      dateRange.to
   );
 
   /**
@@ -239,9 +243,14 @@ export default function EmployeePage() {
         return false;
       }
 
+      if (!inDateRange(employee.createdAt, dateRange)) {
+        return false;
+      }
+
       return true;
     });
   }, [
+    dateRange,
     allEmployees,
     deferredSearchText,
     filterStatus,
@@ -347,6 +356,7 @@ export default function EmployeePage() {
     setFilterRegisterNumber('');
     setFilterPhoneNumber('');
     setFilterEmail('');
+    setDateRange({});
     clearSelectedEmployees();
     paginate(1, limit);
   }, [limit, paginate]);
@@ -550,6 +560,14 @@ export default function EmployeePage() {
       <div className="space-y-4">
         <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="space-y-4">
+            <DateRangeInputs
+              label="Бүртгэсэн огноо"
+              value={dateRange}
+              onChange={(range) => {
+                setDateRange(range);
+                paginate(1, limit);
+              }}
+            />
             {/* Global search */}
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
               <div className="relative flex-1">

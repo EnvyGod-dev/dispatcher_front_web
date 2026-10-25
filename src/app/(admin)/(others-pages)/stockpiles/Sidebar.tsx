@@ -19,7 +19,7 @@ import {
   DialogTitle,
   TransitionChild,
 } from '@headlessui/react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -38,17 +38,24 @@ export default function StockpileFormSidebar({
 }: MaterialFormSidebarProps) {
   const [type, setType] = useState<StockpileType>('coal');
   const [layerNumber, setLayerNumber] = useState('');
-  // Шинээр нэмэхэд маршрутыг овоолготой цуг оруулна.
-  const [routeCode, setRouteCode] = useState('');
-  const [routeDescription, setRouteDescription] = useState('');
+  // Маршрут: байгаагаас сонгох эсвэл шинэ кодыг бичнэ (шинэ бол хадгалахад үүснэ).
+  const [routeValue, setRouteValue] = useState('');
   const [isSavingRoute, setIsSavingRoute] = useState(false);
   const queryClient = useQueryClient();
+
+  const { data: routesData } = useQuery({
+    queryKey: ['routes', 'all'],
+    queryFn: () => routeService.getRoutes({ offset: 0, limit: 1000 }),
+    enabled: isOpen,
+  });
+  const routes = routesData?.data ?? [];
 
   const isEditMode = !!editingMaterial;
 
   useEffect(() => {
     if (editingMaterial) {
       setLayerNumber(editingMaterial.layerNumber);
+      setRouteValue(editingMaterial.routeId ?? '');
 
       setType(editingMaterial.type);
     }
@@ -86,64 +93,56 @@ export default function StockpileFormSidebar({
 
   const resetForm = () => {
     setLayerNumber('');
-    setRouteCode('');
-    setRouteDescription('');
+    setRouteValue('');
 
     setType('coal');
   };
 
-  /** Шинэ маршрут (кодыг бичсэн бол). Амжилттай бол true. */
-  const saveRoute = async () => {
-    if (!routeCode.trim()) return true;
+  /** Сонгосон маршрутын id; шинэ код бичсэн бол маршрутыг үүсгэнэ. Алдаа бол undefined. */
+  const resolveRouteId = async (): Promise<string | null | undefined> => {
+    const value = routeValue.trim();
+    if (!value) return null;
+    if (routes.some((route) => route.id === value)) return value;
+
+    const existing = routes.find(
+      (route) => route.routeCode?.trim().toLowerCase() === value.toLowerCase()
+    );
+    if (existing) return existing.id;
+
     setIsSavingRoute(true);
     try {
-      await routeService.createRoute({
-        routeCode: routeCode.trim(),
-        description: routeDescription.trim() || undefined,
-      });
-      toast.success('Маршрут амжилттай нэмэгдлээ');
-      // Овоолго хадгалахад алдаа гараад дахин илгээвэл маршрут давхардахгүй.
-      setRouteCode('');
-      setRouteDescription('');
+      const created = await routeService.createRoute({ routeCode: value });
       queryClient.invalidateQueries({ queryKey: ['routes'] });
-      return true;
+      setRouteValue(created.body.id);
+      return created.body.id;
     } catch (error) {
       toast.error((error as Error)?.message || 'Маршрут нэмэхэд алдаа гарлаа');
-      return false;
+      return undefined;
     } finally {
       setIsSavingRoute(false);
     }
   };
 
   const handleSubmit = async () => {
-    // Шинээр нэмэхэд: зөвхөн маршрут бичсэн бол овоолгогүйгээр маршрутыг л нэмнэ.
-    if (!isEditMode && !layerNumber.trim() && routeCode.trim()) {
-      if (await saveRoute()) {
-        resetForm();
-        onSuccess?.();
-        onClose();
-      }
-      return;
-    }
-
     if (!type.trim() || !layerNumber) {
       toast.error('Овоолгын дугаар болон төрлийг заавал бөглөнө үү.');
       return;
     }
 
-    if (!isEditMode && !(await saveRoute())) {
-      return;
-    }
+    const routeId = await resolveRouteId();
+    if (routeId === undefined) return;
 
     const formData = {
       layerNumber: layerNumber.trim(),
       type,
+      routeId,
     };
 
     const updateData = {
       id: editingMaterial?.id || '',
       type,
       layerNumber: layerNumber.trim() || undefined,
+      routeId,
     };
 
     try {
@@ -210,7 +209,7 @@ export default function StockpileFormSidebar({
               <div className="flex h-full flex-col bg-white dark:bg-gray-900 shadow-xl">
                 <div className="px-6 py-6 border-b border-gray-200 dark:border-gray-700">
                   <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {isEditMode ? 'Овоолго засах' : 'Овоолго, маршрут нэмэх'}
+                    {isEditMode ? 'Овоолго засах' : 'Овоолго нэмэх'}
                   </DialogTitle>
                 </div>
 
@@ -251,40 +250,29 @@ export default function StockpileFormSidebar({
                     </div>
                   </div>
 
-                  {!isEditMode && (
-                    <div className="space-y-4 border-t border-gray-200 pt-6 dark:border-gray-700">
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                          Маршрут
-                        </h3>
-                        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                          Шинэ маршрут бол кодыг нь бичнэ. Хоосон бол зөвхөн овоолго нэмэгдэнэ.
-                        </p>
-                      </div>
-
-                      <div>
-                        <Label>Маршрутын код</Label>
-                        <Input
-                          className="mt-1"
-                          placeholder="ROUTE-001"
-                          value={routeCode}
-                          onChange={(e) => setRouteCode(e.target.value)}
-                          disabled={isPending}
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Маршрутын тайлбар</Label>
-                        <Input
-                          className="mt-1"
-                          placeholder="Жишээ: Блок 3 → Нүүрсний овоолго"
-                          value={routeDescription}
-                          onChange={(e) => setRouteDescription(e.target.value)}
-                          disabled={isPending || !routeCode.trim()}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <div className="space-y-2 border-t border-gray-200 pt-6 dark:border-gray-700">
+                    <Label>Маршрут</Label>
+                    <Select
+                      className="w-full"
+                      placeholder="Маршрут сонгох эсвэл шинэ код бичих"
+                      searchPlaceholder="Маршрутын код хайх / бичих"
+                      value={routeValue}
+                      onChange={setRouteValue}
+                      disabled={isPending}
+                      allowCreate
+                      createLabel={(input) => `Шинэ маршрут "${input}"`}
+                      options={routes.map((route) => ({
+                        value: route.id,
+                        label: route.description
+                          ? `${route.routeCode} · ${route.description}`
+                          : route.routeCode,
+                        searchText: `${route.routeCode} ${route.description ?? ''}`,
+                      }))}
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Байхгүй маршрутыг бичвэл хадгалахад шинээр үүснэ. Хоосон бол маршрутгүй.
+                    </p>
+                  </div>
                 </form>
 
                 <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 px-6 py-4">

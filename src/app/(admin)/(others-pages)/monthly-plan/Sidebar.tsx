@@ -3,13 +3,6 @@
 import Label from '@/components/form/Label';
 import Input from '@/components/form/input/InputField';
 import Button from '@/components/ui/button/Button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import monthlyPlanService from '@/services/internal/monthly-plan';
 import {
   MonthlyPlan,
@@ -33,20 +26,6 @@ interface MonthlyPlanFormSidebarProps {
   editingPlan?: MonthlyPlan;
 }
 
-const MONTHS = [
-  { value: 1, label: '1 - Нэгдүгээр сар' },
-  { value: 2, label: '2 - Хоёрдугаар сар' },
-  { value: 3, label: '3 - Гуравдугаар сар' },
-  { value: 4, label: '4 - Дөрөвдүгээр сар' },
-  { value: 5, label: '5 - Тавдугаар сар' },
-  { value: 6, label: '6 - Зургаадугаар сар' },
-  { value: 7, label: '7 - Долоодугаар сар' },
-  { value: 8, label: '8 - Наймдугаар сар' },
-  { value: 9, label: '9 - Есдүгээр сар' },
-  { value: 10, label: '10 - Аравдугаар сар' },
-  { value: 11, label: '11 - Арван нэгдүгээр сар' },
-  { value: 12, label: '12 - Арван хоёрдугаар сар' },
-] as const;
 
 export default function MonthlyPlanFormSidebar({
   isOpen,
@@ -57,6 +36,7 @@ export default function MonthlyPlanFormSidebar({
   const [coalAmount, setCoalAmount] = useState('');
   const [soilAmount, setSoilAmount] = useState('');
   const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   const isEditMode = !!editingPlan;
 
@@ -64,6 +44,8 @@ export default function MonthlyPlanFormSidebar({
     if (editingPlan) {
       setCoalAmount(editingPlan.coalAmount);
       setSoilAmount(editingPlan.soilAmount);
+      setYear(editingPlan.year);
+      setMonth(editingPlan.month);
     }
   }, [editingPlan]);
 
@@ -99,6 +81,8 @@ export default function MonthlyPlanFormSidebar({
   const resetForm = () => {
     setCoalAmount('');
     setSoilAmount('');
+    setYear(new Date().getFullYear());
+    setMonth(new Date().getMonth() + 1);
   };
 
   const handleSubmit = async () => {
@@ -129,7 +113,7 @@ export default function MonthlyPlanFormSidebar({
       } else {
         await createMutation.mutateAsync({
           ...formData,
-          year: new Date().getFullYear(),
+          year,
         });
       }
     } catch (error) {
@@ -201,23 +185,21 @@ export default function MonthlyPlanFormSidebar({
                   className="flex-1 overflow-y-auto px-6 py-6 space-y-6"
                 >
                   <div>
-                    <Label>Сар </Label>
-                    <Select
-                      value={month?.toString()}
-                      onValueChange={(value) => setMonth(Number(value))}
-                      disabled={isPending}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Сонгох..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MONTHS.map(({ value, label }) => (
-                          <SelectItem key={value} value={value.toString()}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Он, сар</Label>
+                    {/* Он-сарыг бичиж (2026-11) эсвэл сонгож оруулна; засахад өөрчлөгдөхгүй. */}
+                    <input
+                      type="month"
+                      value={`${year}-${String(month).padStart(2, '0')}`}
+                      onChange={(e) => {
+                        const [y, m] = e.target.value.split('-').map(Number);
+                        if (y && m) {
+                          setYear(y);
+                          setMonth(m);
+                        }
+                      }}
+                      disabled={isPending || isEditMode}
+                      className="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 outline-none focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 dark:border-gray-700 dark:text-white/90"
+                    />
                   </div>
                   <div>
                     <Label>Төлөвлөгөөт хөрс (м3)</Label>

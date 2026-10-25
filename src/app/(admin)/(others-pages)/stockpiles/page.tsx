@@ -32,6 +32,8 @@ import type { Route } from '@/services/internal/routes/types';
 import { exportExcel } from '@/lib/fuel/export';
 import { fetchAllPages } from '@/lib/export/fetch-all';
 import { useExcelExport } from '@/lib/export/use-excel-export';
+import DateRangeInputs, { inDateRange, type OptionalDateRange } from '@/components/form/DateRangeInputs';
+import { fetchPageWithDateFilter } from '@/lib/export/date-paged';
 
 type StockpileTab = 'stockpiles' | 'routes';
 
@@ -58,6 +60,7 @@ export default function MaterialPage() {
     Stockpile | undefined
   >();
   const [filters, setFilters] = useState<StockpileFilters>({});
+  const [dateRange, setDateRange] = useState<OptionalDateRange>({});
   const [tab, setTab] = useState<StockpileTab>('stockpiles');
 
   // ?tab=routes (хуучин /routes холбоос энд шилжинэ).
@@ -76,18 +79,27 @@ export default function MaterialPage() {
   };
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['stockpiles', { offset, limit, ...filters }],
-    queryFn: () => stockpileService.getStockpiles({ offset, limit, ...filters }),
+    queryKey: ['stockpiles', { offset, limit, ...filters, dateRange }],
+    queryFn: () =>
+      fetchPageWithDateFilter<Stockpile>({
+        offset,
+        limit,
+        range: dateRange,
+        getDate: (row) => row.createdAt,
+        fetchPage: (pageOffset, pageLimit) =>
+          stockpileService.getStockpiles({ offset: pageOffset, limit: pageLimit, ...filters }),
+      }),
   });
 
-  const hasActiveFilters = !!filters.type || !!filters.layerNumber;
+  const hasActiveFilters =
+    !!filters.type || !!filters.layerNumber || !!dateRange.from || !!dateRange.to;
 
   // Овоолго (одоогийн шүүлтүүрээр) болон маршрутыг нэг файлд.
   const { isExporting, exportNow } = useExcelExport(async () => {
     const [stockpileRows, routeRows] = await Promise.all([
       fetchAllPages<Stockpile>((offset, limit) =>
         stockpileService.getStockpiles({ offset, limit, ...filters }),
-      ),
+      ).then((rows) => rows.filter((row) => inDateRange(row.createdAt, dateRange))),
       fetchAllPages<Route>((offset, limit) => routeService.getRoutes({ offset, limit })),
     ]);
     if (stockpileRows.length + routeRows.length > 0) {
@@ -98,6 +110,7 @@ export default function MaterialPage() {
           columns: [
             { header: 'Төрөл', value: (r: Stockpile) => StockpileTypeMap[r.type] ?? r.type, width: 18 },
             { header: 'Овоолгын дугаар', value: (r: Stockpile) => r.layerNumber, width: 16 },
+            { header: 'Маршрут', value: (r: Stockpile) => r.routeCode ?? '', width: 14 },
             { header: 'Үүсгэсэн', value: (r: Stockpile) => r.createdAt?.slice(0, 10), width: 12 },
           ],
         },
@@ -144,6 +157,7 @@ export default function MaterialPage() {
   );
 
   const handleClearFilters = useCallback(() => {
+    setDateRange({});
     handleFilterChange({});
   }, [handleFilterChange]);
 
@@ -191,6 +205,17 @@ export default function MaterialPage() {
       'Овоолгын дугаар',
       'layerNumber'
     ).build(),
+
+    TableColumn.custom<Stockpile>('route', 'Маршрут', (stockpile) =>
+      stockpile.routeCode ? (
+        <span className="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+          <RouteIcon className="h-3.5 w-3.5 text-gray-500" />
+          {stockpile.routeCode}
+        </span>
+      ) : (
+        <span className="text-xs text-gray-400">-</span>
+      )
+    ).build(),
   ];
 
   const actionRole = hasRole(user?.role, stockpileActionRoles);
@@ -236,6 +261,16 @@ export default function MaterialPage() {
 
       <div className="space-y-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700 mb-4">
+          <div className="mb-3">
+            <DateRangeInputs
+              label="Бүртгэсэн огноо"
+              value={dateRange}
+              onChange={(range) => {
+                setDateRange(range);
+                paginate(1, limit);
+              }}
+            />
+          </div>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_auto_auto] lg:items-center">
             <div>
               <Input

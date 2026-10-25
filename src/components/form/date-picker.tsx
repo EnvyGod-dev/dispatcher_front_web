@@ -27,8 +27,11 @@ export default function DatePicker({
     const flatPickr = flatpickr(`#${id}`, {
       mode: mode || 'single',
       static: true,
-      monthSelectorType: 'static',
+      // Сарыг жагсаалтаас сонгоно, жилийг бичнэ/сумаар солино.
+      monthSelectorType: 'dropdown',
       dateFormat: 'Y-m-d',
+      // Огноог гараар бичиж оруулж болно (2026-10-25); Enter эсвэл гарахад хэрэгжинэ.
+      allowInput: true,
       defaultDate,
       onChange,
     });
@@ -47,7 +50,8 @@ export default function DatePicker({
       <div className="relative">
         <input
           id={id}
-          placeholder={placeholder}
+          placeholder={placeholder ? `${placeholder} (ЖЖЖЖ-СС-ӨӨ)` : 'ЖЖЖЖ-СС-ӨӨ'}
+          autoComplete="off"
           className="h-9 w-full rounded-lg border appearance-none px-4 py-2 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3  dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30  bg-transparent text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-brand-500/20 dark:border-gray-700  dark:focus:border-brand-800"
         />
 
