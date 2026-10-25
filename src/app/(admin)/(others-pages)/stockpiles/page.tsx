@@ -27,6 +27,11 @@ import { useAuth } from '@/components/AuthProvider';
 import { hasRole, stockpileActionRoles } from '@/services/roles';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RoutesPanel from '../routes/RoutesPanel';
+import routeService from '@/services/internal/routes';
+import type { Route } from '@/services/internal/routes/types';
+import { exportExcel } from '@/lib/fuel/export';
+import { fetchAllPages } from '@/lib/export/fetch-all';
+import { useExcelExport } from '@/lib/export/use-excel-export';
 
 type StockpileTab = 'stockpiles' | 'routes';
 
@@ -76,6 +81,39 @@ export default function MaterialPage() {
   });
 
   const hasActiveFilters = !!filters.type || !!filters.layerNumber;
+
+  // Овоолго (одоогийн шүүлтүүрээр) болон маршрутыг нэг файлд.
+  const { isExporting, exportNow } = useExcelExport(async () => {
+    const [stockpileRows, routeRows] = await Promise.all([
+      fetchAllPages<Stockpile>((offset, limit) =>
+        stockpileService.getStockpiles({ offset, limit, ...filters }),
+      ),
+      fetchAllPages<Route>((offset, limit) => routeService.getRoutes({ offset, limit })),
+    ]);
+    if (stockpileRows.length + routeRows.length > 0) {
+      exportExcel('ovoolgo-marshrut', [
+        {
+          name: 'Овоолго',
+          rows: stockpileRows,
+          columns: [
+            { header: 'Төрөл', value: (r: Stockpile) => StockpileTypeMap[r.type] ?? r.type, width: 18 },
+            { header: 'Овоолгын дугаар', value: (r: Stockpile) => r.layerNumber, width: 16 },
+            { header: 'Үүсгэсэн', value: (r: Stockpile) => r.createdAt?.slice(0, 10), width: 12 },
+          ],
+        },
+        {
+          name: 'Маршрут',
+          rows: routeRows,
+          columns: [
+            { header: 'Код', value: (r: Route) => r.routeCode, width: 14 },
+            { header: 'Тайлбар', value: (r: Route) => r.description ?? '', width: 40 },
+            { header: 'Үүсгэсэн', value: (r: Route) => r.createdAt?.slice(0, 10), width: 12 },
+          ],
+        },
+      ]);
+    }
+    return stockpileRows.length + routeRows.length;
+  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => stockpileService.deleteStockpile(id),
@@ -174,6 +212,8 @@ export default function MaterialPage() {
       <PageBreadcrumb
         pageTitle="Овоолго ба маршрут"
         description="Буулгах овоолго болон тээврийн маршрутын бүртгэл"
+        onExport={exportNow}
+        isExporting={isExporting}
       />
 
       <Tabs value={tab} onValueChange={handleTabChange}>

@@ -35,6 +35,10 @@ import { dailyPlanActionRoles, hasRole } from '@/services/roles';
 import DailyPlanFormSidebar from './Sidebar';
 import StockpileLabel from '@/components/stockpile/StockpileTag';
 import ShiftTypeBadge from '@/components/shift-report/ShiftType';
+import { exportExcel } from '@/lib/fuel/export';
+import { fetchAllPages } from '@/lib/export/fetch-all';
+import { useExcelExport } from '@/lib/export/use-excel-export';
+import { stockpileTypeMap } from '@/services/internal/stockpile/types';
 
 type ApiError = Error & { status?: number };
 
@@ -72,6 +76,46 @@ export default function DailyPlansPage() {
         shiftType: selectedShiftType,
       }),
     enabled: !!user,
+  });
+
+  const { isExporting, exportNow } = useExcelExport(async () => {
+    const rows = await fetchAllPages<DailyPlan>((offset, limit) =>
+      dailyPlanService.getDailyPlansRange({
+        offset,
+        limit,
+        startDate: dateRange.from,
+        endDate: dateRange.to,
+        shiftType: selectedShiftType,
+      }),
+    );
+    const stockpileText = (plan: DailyPlan) =>
+      (plan.stockpiles ?? [])
+        .map((sp) =>
+          [stockpileTypeMap.find((t) => t.value === sp.type)?.label ?? sp.type, sp.layerNumber]
+            .filter(Boolean)
+            .join(' - '),
+        )
+        .join(', ');
+    if (rows.length) {
+      exportExcel(`odriin-tolovlolt_${dateRange.from}_${dateRange.to}`, [
+        {
+          name: 'Өдрийн төлөвлөлт',
+          rows,
+          columns: [
+            { header: 'Огноо', value: (p: DailyPlan) => p.date, width: 12 },
+            { header: 'Ээлж', value: (p: DailyPlan) => (p.shiftType === 'night' ? 'Шөнө' : 'Өдөр'), width: 8 },
+            { header: 'Төлөв', value: (p: DailyPlan) => (p.status === 'completed' ? 'Дууссан' : 'Идэвхтэй'), width: 10 },
+            { header: 'Техник', value: (p: DailyPlan) => p.vehicleCode ?? '', width: 12 },
+            { header: 'Маршрут', value: (p: DailyPlan) => p.routeCode ?? '', width: 12 },
+            { header: 'Ачих блок', value: (p: DailyPlan) => p.miningBlockName ?? '', width: 14 },
+            { header: 'Талын зай', value: (p: DailyPlan) => p.miningBlockLayerNumber ?? '', width: 10 },
+            { header: 'Овоолго', value: stockpileText, width: 28 },
+            { header: 'Төлөвлөгөөт хэмжээ м³', value: (p: DailyPlan) => (p.transportAmount ? Number(p.transportAmount) : null), width: 16 },
+          ],
+        },
+      ]);
+    }
+    return rows.length;
   });
 
   const deleteMutation = useMutation({
@@ -317,6 +361,8 @@ export default function DailyPlansPage() {
       <PageBreadcrumb
         pageTitle="Өдрийн төлөвлөлт"
         description="Диспетчерийн үүсгэсэн өдрийн төлөвлөлт"
+        onExport={exportNow}
+        isExporting={isExporting}
         actions={
           hasRole(user.role, dailyPlanActionRoles)
             ? {

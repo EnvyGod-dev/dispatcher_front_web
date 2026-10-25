@@ -30,6 +30,9 @@ import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { exportExcel } from "@/lib/fuel/export";
+import { fetchAllPages } from "@/lib/export/fetch-all";
+import { useExcelExport } from "@/lib/export/use-excel-export";
 
 export default function InspectionReportsPage() {
   const { offset, limit, paginate } = usePagination();
@@ -65,6 +68,38 @@ export default function InspectionReportsPage() {
         shiftType: filters.shiftType,
         driverId: filters.driverId,
       }),
+  });
+
+  const { isExporting, exportNow } = useExcelExport(async () => {
+    const rows = await fetchAllPages<VehicleInspectionSummary>((pageOffset, pageLimit) =>
+      inspectionService.getVehicleInspectionSummary({
+        offset: pageOffset,
+        limit: pageLimit,
+        ...filters,
+      }),
+    );
+    if (rows.length) {
+      const period = [filters.startDate, filters.endDate].filter(Boolean).join("_");
+      exportExcel(`uzlegiin-tailan${period ? `_${period}` : ""}`, [
+        {
+          name: "Үзлэгийн тайлан",
+          rows,
+          columns: [
+            { header: "Техник", value: (r: VehicleInspectionSummary) => r.vehicleCode, width: 12 },
+            { header: "Нэр", value: (r: VehicleInspectionSummary) => r.vehicleName, width: 18 },
+            { header: "Төрөл", value: (r: VehicleInspectionSummary) => vehicleTypeLabels[r.vehicleType] ?? r.vehicleType, width: 16 },
+            { header: "Төлөв", value: (r: VehicleInspectionSummary) => vehicleStatusLabels[r.vehicleStatus] ?? r.vehicleStatus, width: 12 },
+            { header: "Нийт үзлэг", value: (r: VehicleInspectionSummary) => Number(r.totalInspections), width: 11 },
+            { header: "Хэвийн", value: (r: VehicleInspectionSummary) => Number(r.normalCount), width: 9 },
+            { header: "Аюултай", value: (r: VehicleInspectionSummary) => Number(r.issueCount), width: 9 },
+            { header: "Анхаарах", value: (r: VehicleInspectionSummary) => Number(r.needsInspectionCount), width: 10 },
+            { header: "Үзлэггүй ээлж", value: (r: VehicleInspectionSummary) => Number(r.shiftsWithoutInspection), width: 13 },
+            { header: "Сүүлийн үзлэг", value: (r: VehicleInspectionSummary) => (r.lastInspectionDate ? formatDateFull(r.lastInspectionDate) : ""), width: 18 },
+          ],
+        },
+      ]);
+    }
+    return rows.length;
   });
 
   const { data: usersData, isLoading: isUsersLoading } = useQuery({
@@ -245,6 +280,8 @@ export default function InspectionReportsPage() {
       <PageBreadcrumb
         pageTitle="Техникийн үзлэгийн тайлан"
         description="Техник тус бүрийн үзлэгийн дүнг харах"
+        onExport={exportNow}
+        isExporting={isExporting}
       />
 
       {/* Filters */}

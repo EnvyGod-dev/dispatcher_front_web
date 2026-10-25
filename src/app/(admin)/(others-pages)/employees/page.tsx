@@ -518,24 +518,20 @@ export default function EmployeePage() {
     <div>
       <PageBreadcrumb
         pageTitle="Хүний нөөц бүртгэл"
+        onExport={() => {
+          if (filteredEmployees.length === 0) {
+            toast.error('Татах ажилтан алга');
+            return;
+          }
+          exportEmployees(filteredEmployees);
+        }}
         actions={[
-          {
-            label: 'Excel татах',
-            variant: 'secondary' as const,
-            icon: <FileSpreadsheet className="h-4 w-4" />,
-            onClick: () => {
-              if (filteredEmployees.length === 0) {
-                toast.error('Татах ажилтан алга');
-                return;
-              }
-              exportEmployees(filteredEmployees);
-            },
-          },
           ...(actionRole
             ? [
                 {
                   label: 'Excel загвар',
                   variant: 'secondary' as const,
+                  icon: <FileSpreadsheet className="h-4 w-4" />,
                   onClick: downloadEmployeeTemplate,
                 },
                 {

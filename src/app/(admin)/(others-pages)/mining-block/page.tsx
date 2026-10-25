@@ -34,6 +34,9 @@ import {
 } from '@/services/roles';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
+import { exportExcel } from '@/lib/fuel/export';
+import { fetchAllPages } from '@/lib/export/fetch-all';
+import { useExcelExport } from '@/lib/export/use-excel-export';
 
 export default function MiningBlocksPage() {
   const router = useRouter();
@@ -53,6 +56,31 @@ export default function MiningBlocksPage() {
     queryKey: ['mining-blocks', { offset, limit, ...filters }],
     queryFn: () =>
       miningBlockService.getMiningBlocks({ offset, limit, ...filters }),
+  });
+
+  const { isExporting, exportNow } = useExcelExport(async () => {
+    const rows = await fetchAllPages<MiningBlock>((offset, limit) =>
+      miningBlockService.getMiningBlocks({ offset, limit, ...filters }),
+    );
+    if (rows.length) {
+      exportExcel('blok', [
+        {
+          name: 'Блок',
+          rows,
+          columns: [
+            { header: 'Нэр', value: (b: MiningBlock) => b.name, width: 18 },
+            { header: 'Талын зай / үе', value: (b: MiningBlock) => b.layerNumber, width: 14 },
+            { header: 'Төлөв', value: (b: MiningBlock) => (b.isActive ? 'Идэвхтэй' : 'Идэвхгүй'), width: 10 },
+            { header: 'Холбогдсон төлөвлөгөө', value: (b: MiningBlock) => b.linkedPlanCount ?? '', width: 12 },
+            { header: 'Өргөрөг', value: (b: MiningBlock) => b.latitude ?? '', width: 12 },
+            { header: 'Уртраг', value: (b: MiningBlock) => b.longitude ?? '', width: 12 },
+            { header: 'Тайлбар', value: (b: MiningBlock) => b.description ?? '', width: 30 },
+            { header: 'Үүсгэсэн', value: (b: MiningBlock) => b.createdAt?.slice(0, 10), width: 12 },
+          ],
+        },
+      ]);
+    }
+    return rows.length;
   });
 
   const hasActiveFilters =
@@ -219,6 +247,8 @@ export default function MiningBlocksPage() {
       <PageBreadcrumb
         pageTitle="Блок ашиглалт"
         description="Тэсэлгээний блокын бүртгэл"
+        onExport={exportNow}
+        isExporting={isExporting}
         actions={
           hasRole(user?.role, miningBlockActionRoles)
             ? {

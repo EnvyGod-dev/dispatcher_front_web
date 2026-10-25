@@ -15,6 +15,8 @@ import {
 } from 'sonner';
 
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
+import { exportShiftLogs } from '@/lib/export/shift-logs';
+import { useExcelExport } from '@/lib/export/use-excel-export';
 import Pagination from '@/components/tables/Pagination';
 import {
     ConfirmDialog,
@@ -291,6 +293,14 @@ export default function TimeManagementPage() {
                 }),
     });
 
+    const { isExporting, exportNow } = useExcelExport(() =>
+        exportShiftLogs({
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            focus: 'idle',
+        })
+    );
+
     const logs =
         data?.data ?? [];
 
@@ -472,6 +482,8 @@ export default function TimeManagementPage() {
         <div className="space-y-5">
             <PageBreadcrumb
                 pageTitle="Цаг ашиглалт"
+                onExport={exportNow}
+                isExporting={isExporting}
                 description="Техникийн ажилласан болон сул зогсолтын цагийн бүртгэл"
                 actions={
                     canAction
