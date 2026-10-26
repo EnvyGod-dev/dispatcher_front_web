@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Layers, Plus, Route as RouteIcon } from 'lucide-react';
+import { Layers, Plus, Power, PowerOff, Route as RouteIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -60,7 +60,8 @@ export default function MaterialPage() {
   const [deletingMaterial, setDeletingMaterial] = useState<
     Stockpile | undefined
   >();
-  const [filters, setFilters] = useState<StockpileFilters>({});
+  // Анхдагчаар зөвхөн идэвхтэй овоолго (идэвхгүй болгосон нь давхардахгүй).
+  const [filters, setFilters] = useState<StockpileFilters>({ status: 'active' });
   const [dateRange, setDateRange] = useState<OptionalDateRange>({});
   const [shiftFilter, setShiftFilter] = useState<ShiftFilterValue>('');
   const [tab, setTab] = useState<StockpileTab>('stockpiles');
@@ -131,14 +132,17 @@ export default function MaterialPage() {
     return stockpileRows.length + routeRows.length;
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => stockpileService.deleteStockpile(id),
-    onSuccess: () => {
-      toast.success('Овоолго амжилттай устгагдлаа');
+  const statusMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      stockpileService.updateStockpile({ id, isActive }),
+    onSuccess: (_, variables) => {
+      toast.success(
+        variables.isActive ? 'Овоолгыг идэвхжүүллээ' : 'Овоолгыг идэвхгүй болголоо'
+      );
       refetch();
     },
-    onError: () => {
-      toast.error('Овоолго устгахад алдаа гарлаа');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Төлөв солиход алдаа гарлаа');
     },
   });
 
@@ -162,7 +166,7 @@ export default function MaterialPage() {
   const handleClearFilters = useCallback(() => {
     setDateRange({});
     setShiftFilter('');
-    handleFilterChange({});
+    handleFilterChange({ status: 'active' });
   }, [handleFilterChange]);
 
   const handleSuccess = () => {
@@ -210,6 +214,18 @@ export default function MaterialPage() {
       'layerNumber'
     ).build(),
 
+    TableColumn.custom<Stockpile>('status', 'Төлөв', (stockpile) =>
+      stockpile.deactivatedAt ? (
+        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+          Идэвхгүй
+        </span>
+      ) : (
+        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400">
+          Идэвхтэй
+        </span>
+      )
+    ).build(),
+
     TableColumn.custom<Stockpile>('route', 'Маршрут', (stockpile) =>
       stockpile.routeCode ? (
         <span className="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200">
@@ -227,7 +243,26 @@ export default function MaterialPage() {
   const actions = actionRole
     ? [
       TableActions.edit<Stockpile>(handleEdit),
-      TableActions.delete<Stockpile>(handleDelete),
+      TableActions.custom<Stockpile>(
+        <PowerOff className="h-4 w-4" />,
+        handleDelete,
+        {
+          variant: 'danger',
+          title: 'Идэвхгүй болгох',
+          isDisabled: (stockpile) => Boolean(stockpile.deactivatedAt),
+          isLoading: (stockpile) =>
+            statusMutation.isPending && statusMutation.variables?.id === stockpile.id,
+        }
+      ),
+      TableActions.custom<Stockpile>(
+        <Power className="h-4 w-4" />,
+        (stockpile) => statusMutation.mutate({ id: stockpile.id, isActive: true }),
+        {
+          variant: 'success',
+          title: 'Идэвхжүүлэх',
+          isDisabled: (stockpile) => !stockpile.deactivatedAt,
+        }
+      ),
     ]
     : undefined;
 
@@ -280,7 +315,7 @@ export default function MaterialPage() {
               }}
             />
           </div>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_auto_auto] lg:items-center">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_10rem_12rem_auto_auto] lg:items-center">
             <div>
               <Input
                 type="text"
@@ -290,6 +325,24 @@ export default function MaterialPage() {
                   handleFilterChange({
                     ...filters,
                     layerNumber: e.target.value || undefined,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Select
+                options={[
+                  { value: 'active', label: 'Идэвхтэй' },
+                  { value: 'inactive', label: 'Идэвхгүй' },
+                  { value: 'all', label: 'Бүгд' },
+                ]}
+                placeholder="Төлөв"
+                value={filters.status ?? 'all'}
+                onChange={(value) =>
+                  handleFilterChange({
+                    ...filters,
+                    status:
+                      value === 'active' || value === 'inactive' ? value : undefined,
                   })
                 }
               />
@@ -362,12 +415,14 @@ export default function MaterialPage() {
       <ConfirmDialog
         open={!!deletingMaterial}
         onOpenChange={() => setDeletingMaterial(undefined)}
-        title="Овоолго устгах уу?"
-        description={`"${deletingMaterial ? StockpileTypeMap[deletingMaterial.type] : ''}" овоолгыг устгах үйлдлийг буцаах боломжгүй.`}
+        title="Овоолгыг идэвхгүй болгох уу?"
+        description={`"${deletingMaterial ? `${StockpileTypeMap[deletingMaterial.type]} ${deletingMaterial.layerNumber}` : ''}" овоолго өдрийн төлөвлөгөөнд сонгогдохоо болино. Хуучин рейс, тайлан хэвээр үлдэнэ. Дараа нь дахин идэвхжүүлж болно.`}
         variant="destructive"
+        confirmText="Идэвхгүй болгох"
+        cancelText="Болих"
         onConfirm={() => {
           if (deletingMaterial) {
-            deleteMutation.mutate(deletingMaterial.id);
+            statusMutation.mutate({ id: deletingMaterial.id, isActive: false });
             setDeletingMaterial(undefined);
           }
         }}

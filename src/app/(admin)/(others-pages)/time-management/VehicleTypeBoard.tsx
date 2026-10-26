@@ -65,6 +65,22 @@ export default function VehicleTypeBoard({
     [vehiclesQuery.data],
   );
 
+  // Ээлжийн оператор (бүртгээгүй техникт харуулна).
+  const shiftsQuery = useQuery({
+    queryKey: ['equipment-vehicle-shifts', date, shift],
+    queryFn: () => equipmentShiftLogService.getVehicleShifts(date, shift),
+    enabled: Boolean(date),
+    staleTime: 60_000,
+  });
+
+  const shiftOperatorByVehicle = useMemo(() => {
+    const map = new Map<string, string>();
+    (shiftsQuery.data ?? []).forEach((item) => {
+      if (item.operatorName) map.set(item.vehicleId, item.operatorName);
+    });
+    return map;
+  }, [shiftsQuery.data]);
+
   const logByVehicle = useMemo(() => {
     const map = new Map<string, ShiftLog>();
     (logsQuery.data ?? []).forEach((log) => map.set(log.vehicleId, log));
@@ -262,7 +278,12 @@ export default function VehicleTypeBoard({
                           {operator ? ` · ${operator}` : ''}
                         </p>
                       ) : (
-                        <p className="mt-1 text-xs text-gray-400">Бүртгээгүй</p>
+                        <p className="mt-1 truncate text-xs text-gray-400">
+                          Бүртгээгүй
+                          {shiftOperatorByVehicle.get(vehicle.id)
+                            ? ` · ${shiftOperatorByVehicle.get(vehicle.id)}`
+                            : ''}
+                        </p>
                       )}
                     </div>
                   </button>

@@ -364,6 +364,69 @@ export default function TimeManagementForm({
     });
 
     // ==========================================================
+    // ЭЭЛЖЭЭС ОПЕРАТОР АВТОМАТААР
+    // ==========================================================
+
+    const {
+        data:
+        vehicleShifts = [],
+    } = useQuery({
+        queryKey: [
+            'equipment-vehicle-shifts',
+            operationalDate,
+            shiftType,
+        ],
+        queryFn: () =>
+            equipmentShiftLogService.getVehicleShifts(
+                operationalDate,
+                shiftType
+            ),
+        enabled:
+            !isEditMode &&
+            !!operationalDate,
+        staleTime:
+            60_000,
+    });
+
+    // Хэрэглэгч операторыг гараар сонгосон бол дарж бичихгүй.
+    const [
+        operatorTouched,
+        setOperatorTouched,
+    ] = useState(false);
+
+    const vehicleShift =
+        vehicleShifts.find(
+            (item) =>
+                item.vehicleId ===
+                vehicleId
+        );
+
+    useEffect(() => {
+        if (isEditMode) {
+            return;
+        }
+
+        setShiftId(
+            vehicleShift?.shiftId ??
+            ''
+        );
+
+        if (
+            !operatorTouched &&
+            vehicleShift?.operatorId
+        ) {
+            setOperatorId(
+                vehicleShift.operatorId
+            );
+        }
+    }, [
+        isEditMode,
+        operatorTouched,
+        vehicleShift?.shiftId,
+        vehicleShift?.operatorId,
+    ]);
+
+    // ==========================================================
     // OPERATORS
     // ==========================================================
 
@@ -1517,9 +1580,15 @@ export default function TimeManagementForm({
                                 onChange={(
                                     event
                                 ) =>
+                                {
+                                    setOperatorTouched(
+                                        true
+                                    );
+
                                     setOperatorId(
                                         event.target.value
-                                    )
+                                    );
+                                }
                                 }
                                 className={
                                     selectClass
@@ -1547,7 +1616,41 @@ export default function TimeManagementForm({
                                         </option>
                                     )
                                 )}
+
+                                {/* Ээлжийн оператор жагсаалтад байхгүй бол (өөр үүрэгтэй) нэрээр нь нэмнэ. */}
+                                {vehicleShift?.operatorId &&
+                                    !operators.some(
+                                        (operator) =>
+                                            operator.id ===
+                                            vehicleShift.operatorId
+                                    ) && (
+                                    <option
+                                        value={
+                                            vehicleShift.operatorId
+                                        }
+                                    >
+                                        {vehicleShift.operatorName ??
+                                            'Ээлжийн оператор'}
+                                    </option>
+                                )}
                             </select>
+
+                            {!isEditMode &&
+                                vehicleShift?.operatorId &&
+                                operatorId ===
+                                    vehicleShift.operatorId && (
+                                <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                                    Ээлжээс автоматаар бөглөгдсөн
+                                </p>
+                            )}
+
+                            {!isEditMode &&
+                                vehicleId &&
+                                !vehicleShift && (
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    Энэ өдөр/ээлжид тухайн техникийн ээлж бүртгэгдээгүй — операторыг сонгоно уу
+                                </p>
+                            )}
                         </div>
 
                     </div>

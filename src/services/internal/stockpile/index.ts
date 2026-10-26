@@ -14,6 +14,7 @@ const stockpileService = {
     limit,
     type,
     layerNumber,
+    status,
   }: {
     offset?: number;
     limit?: number;
@@ -24,6 +25,7 @@ const stockpileService = {
         limit,
         type,
         layerNumber,
+        status,
       },
     });
 
