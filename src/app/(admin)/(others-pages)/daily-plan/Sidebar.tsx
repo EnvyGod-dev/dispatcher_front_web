@@ -27,7 +27,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { stockpileTypeMap } from '@/services/internal/stockpile/types';
-import { vehicleTypeLabels } from '@/services/internal/vehicle/types';
+import { vehicleTypeLabels, type VehicleType } from '@/services/internal/vehicle/types';
 
 type PaginatedResponse<T> = {
   data: T[];
@@ -73,6 +73,9 @@ async function fetchAllPages<T>(
     totalCount: allItems.length,
   };
 }
+
+/** Өдрийн төлөвлөгөөнд сонгогдох техникийн төрөл. */
+const PLAN_VEHICLE_TYPES: VehicleType[] = ['excavator', 'loader'];
 
 interface DailyPlanFormSidebarProps {
   isOpen: boolean;
@@ -140,9 +143,14 @@ export default function DailyPlanFormSidebar({
     stockpileIds
       .map((id) => stockpiles?.find((stockpile) => stockpile.id === id)?.routeCode)
       .find(Boolean) ?? null;
-  // Бүх төрлийн техник (ашиглалтаас гарсныг эс тооцвол), төрлөөр нь эрэмбэлнэ.
+  // Ирсэн техникээс зөвхөн одоо ажиллаж буй (Идэвхтэй) экскаватор, дугуйт ачигчийг харуулна;
+  // засварт байгаа, ашиглалтаас гарсан нь харагдахгүй.
   const vehicles = vehiclesData?.data
-    ?.filter((vehicle) => vehicle.status !== 'retired' || vehicle.id === vehicleId)
+    ?.filter(
+      (vehicle) =>
+        vehicle.id === vehicleId ||
+        (PLAN_VEHICLE_TYPES.includes(vehicle.type) && vehicle.status === 'active')
+    )
     .sort(
       (a, b) =>
         (vehicleTypeLabels[a.type] ?? a.type).localeCompare(vehicleTypeLabels[b.type] ?? b.type) ||
@@ -366,7 +374,20 @@ export default function DailyPlanFormSidebar({
                       onChange={setVehicleId}
                       disabled={!vehicles || editingPlan !== undefined}
                       options={
-                        vehicles?.map((vehicle) => ({
+                        [
+                          // Засаж буй төлөвлөгөөний техник өөр төрлийнх бол кодоор нь харуулна.
+                          ...(editingPlan &&
+                          editingPlan.vehicleId &&
+                          !vehicles?.some((vehicle) => vehicle.id === editingPlan.vehicleId)
+                            ? [
+                                {
+                                  value: editingPlan.vehicleId,
+                                  label: editingPlan.vehicleCode || editingPlan.vehicleName || 'Техник',
+                                  searchText: editingPlan.vehicleCode ?? '',
+                                },
+                              ]
+                            : []),
+                          ...(vehicles?.map((vehicle) => ({
                           value: vehicle.id,
                           label: [vehicle.code || vehicle.name, vehicleTypeLabels[vehicle.type]]
                             .filter(Boolean)
@@ -380,7 +401,8 @@ export default function DailyPlanFormSidebar({
                           ]
                             .filter(Boolean)
                             .join(' '),
-                        })) ?? []
+                        })) ?? []),
+                        ]
                       }
                     />
                   </div>
