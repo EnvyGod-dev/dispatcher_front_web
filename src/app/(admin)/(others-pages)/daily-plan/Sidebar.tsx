@@ -136,7 +136,10 @@ export default function DailyPlanFormSidebar({
       isLoadingVehicles);
 
   const blastBlocks = blastBlocksData?.data;
-  const stockpiles = stockpilesData?.data;
+  // Идэвхгүй болгосон овоолго сонгогдохгүй (засаж буй төлөвлөгөөнийх харагдсаар).
+  const stockpiles = stockpilesData?.data?.filter(
+    (stockpile) => !stockpile.deactivatedAt || stockpileIds.includes(stockpile.id)
+  );
 
   // Сонгосон овоолгын (дарааллаар эхний) маршрут — backend ч ингэж тооцно.
   const derivedRouteCode =

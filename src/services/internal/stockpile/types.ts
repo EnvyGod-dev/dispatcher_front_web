@@ -39,8 +39,12 @@ export type StockpileResponse = {
 export type StockpileFilters = {
   type?: StockpileType;
   layerNumber?: string;
+  /** 'active' — идэвхтэй, 'inactive' — идэвхгүй, өгөхгүй бол бүгд. */
+  status?: 'active' | 'inactive';
 };
 
 export type UpdateStockpileInput = Partial<Stockpile> & {
   id: string;
+  /** false — идэвхгүй болгох, true — дахин идэвхжүүлэх. */
+  isActive?: boolean;
 };

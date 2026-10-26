@@ -584,6 +584,32 @@ const getVehiclesByDate =
     };
 
 // ============================================================
+// VEHICLE SHIFTS (оператор автоматаар)
+// ============================================================
+
+export type VehicleShiftOperator = {
+    vehicleId: string;
+    shiftId: string;
+    shiftType: ShiftType;
+    operatorId: string | null;
+    operatorName: string | null;
+};
+
+/** Тухайн өдөр (ба ээлжид) техник бүрийн ээлж, оператор. */
+const getVehicleShifts = async (
+    date: string,
+    shiftType?: ShiftType
+): Promise<VehicleShiftOperator[]> => {
+    const res = await http.get<
+        VehicleShiftOperator[]
+    >(`${BASE_URL}/vehicle-shifts`, {
+        params: { date, shiftType },
+    });
+
+    return res.body;
+};
+
+// ============================================================
 // LOG LIST
 // ============================================================
 
@@ -848,6 +874,7 @@ const equipmentShiftLogService = {
 
     // Vehicles
     getVehiclesByDate,
+    getVehicleShifts,
 
     // Repair
     createOrAppendRepair,
