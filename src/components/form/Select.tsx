@@ -177,7 +177,9 @@ const Select: React.FC<SelectProps> = ({
             {filteredOptions.map((option) => (
               <CommandItem
                 key={option.value}
-                value={getOptionSearchValue(option)}
+                // cmdk сонголтыг value-гаар ялгадаг: ижил нэртэй (жишээ нь нэг экскаваторын
+                // хэд хэдэн төлөвлөгөө) сонголтууд зэрэг тодрохгүйн тулд id-г залгана.
+                value={`${getOptionSearchValue(option)} ${option.value}`}
                 keywords={getCommandKeywords(option)}
                 onSelect={() => handleSelect(option.value)}
                 className={cn(
